@@ -2,8 +2,8 @@ import { createMemo } from "solid-js";
 
 import { getConfig } from "../../../../config/store";
 import { getLocalPB } from "../../../../db";
-import { getFormatting, isAuthenticated } from "../../../../states/core";
-import { getSnapshot } from "../../../../states/snapshot";
+import { getPracticeStats } from "../../../../offline/stats";
+import { getFormatting } from "../../../../states/core";
 import { getCurrentQuote } from "../../../../states/test";
 import { getActiveFunboxes } from "../../../../test/funbox/list";
 import { getMode2 } from "../../../../utils/misc";
@@ -11,13 +11,12 @@ import { Notice } from "./Notice";
 
 export function PbNotice() {
   const displayText = createMemo(() => {
-    if (!isAuthenticated()) return "";
     const format = getFormatting();
 
     //react on config.funbox
     const _funbox = getConfig.funbox;
     //react on new localPB
-    const _snapshot = getSnapshot();
+    const _snapshot = getPracticeStats();
 
     const mode2 = getMode2(getConfig, getCurrentQuote());
     const pb = getLocalPB(
@@ -45,7 +44,7 @@ export function PbNotice() {
 
   return (
     <Notice
-      when={isAuthenticated() && getConfig.showPb}
+      when={getConfig.showPb}
       icon="fa-crown"
       openCommandline="showPb"
       text={displayText()}

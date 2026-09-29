@@ -1,3 +1,4 @@
+import { assetUrl } from "../../utils/asset-url";
 import { Button } from "../common/Button";
 import { H2 } from "../common/Headers";
 import { Page } from "../common/Page";
@@ -8,7 +9,7 @@ export function NotFoundPage() {
       <div class="flex h-full items-center justify-center">
         <div class="flex flex-col gap-16 md:flex-row">
           <div class="place-self-center">
-            <img src="/images/monkeymeme.jpg" class="rounded-xl" />
+            <img src={assetUrl("images/monkeymeme.jpg")} class="rounded-xl" />
           </div>
           <div class="flex max-w-md flex-col items-center gap-4">
             <H2 text="404" class="pb-0 text-7xl text-main" />
@@ -21,7 +22,7 @@ export function NotFoundPage() {
               fa={{ icon: "fa-home" }}
               text="Go Home"
               router-link
-              href="/"
+              href={`${import.meta.env.BASE_URL}#/`}
               class="px-8 py-4"
             />
           </div>

@@ -36,7 +36,13 @@ export class LocalStorageWithSchema<T> {
     }
 
     console.debug(`LS ${this.key} Getting value from localStorage`);
-    const value = window.localStorage.getItem(this.key);
+    let value: string | null;
+    try {
+      value = window.localStorage.getItem(this.key);
+    } catch {
+      this.cache = this.fallback;
+      return structuredClone(this.cache);
+    }
 
     if (value === null) {
       console.debug(`LS ${this.key} No value found, returning fallback`);
@@ -72,14 +78,16 @@ export class LocalStorageWithSchema<T> {
       console.error(
         `LS ${this.key} Failed to parse from localStorage: ${error.message}`,
       );
-      window.localStorage.setItem(this.key, JSON.stringify(this.fallback));
+      this.cache = undefined;
+      this.set(this.fallback);
       this.cache = this.fallback;
       return structuredClone(this.cache);
     }
 
     if (migrated || parsed === this.fallback) {
       console.debug(`LS ${this.key} Setting in localStorage`);
-      window.localStorage.setItem(this.key, JSON.stringify(parsed));
+      this.cache = undefined;
+      this.set(parsed as T);
     }
 
     console.debug(`LS ${this.key} Got value:`, parsed);

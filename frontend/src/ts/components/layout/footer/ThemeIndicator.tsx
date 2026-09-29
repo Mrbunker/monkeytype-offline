@@ -5,7 +5,6 @@ import { setConfig } from "../../../config/setters";
 import { Config } from "../../../config/store";
 import {
   getThemeIndicator,
-  isAuthenticated,
   setCommandlineSubgroup,
 } from "../../../states/core";
 import { showModal } from "../../../states/modals";
@@ -21,7 +20,7 @@ export function ThemeIndicator(): JSXElement {
         setConfig("customTheme", false);
         return;
       }
-      if (isAuthenticated() && themes().length < 1) {
+      if (themes().length < 1) {
         showNoticeNotification("No custom themes!");
         setConfig("customTheme", false);
         return;

@@ -1,5 +1,4 @@
 import { createResource, createSignal, JSXElement, Show } from "solid-js";
-import { z } from "zod";
 
 import { resetConfig } from "../../../config/lifecycle";
 import { getConfig } from "../../../config/store";
@@ -8,9 +7,6 @@ import {
   previewClick,
   previewError,
 } from "../../../controllers/sound-controller";
-import { useLocalStorage } from "../../../hooks/useLocalStorage";
-import { isAuthenticated } from "../../../states/core";
-import { showModal } from "../../../states/modals";
 import { isSettingsSearchActive } from "../../../states/settings-search";
 import { showSimpleModal } from "../../../states/simple-modal";
 import { cn } from "../../../utils/cn";
@@ -39,9 +35,7 @@ import { MinAcc } from "./custom-setting/MinAcc";
 import { MinBurst } from "./custom-setting/MinBurst";
 import { MinSpeed } from "./custom-setting/MinSpeed";
 import { PaceCaret } from "./custom-setting/PaceCaret";
-import { Presets } from "./custom-setting/Presets";
 import { SoundVolume } from "./custom-setting/SoundVolume";
-import { Tags } from "./custom-setting/Tags";
 import { Theme } from "./custom-setting/Theme";
 import { QuickNav } from "./QuickNav";
 import { SearchableAutoSetting } from "./SearchableAutoSetting";
@@ -72,16 +66,11 @@ export function SettingsPage(): JSXElement {
             <br />( <CommandlineHotkey /> )
           </div>
         </Show>
-        <AccountSettingsNotice />
         <SettingsSearch />
         {/* while filtering, lay the matching sections out with a uniform gap */}
         <div class={cn(isSettingsSearchActive() && "grid gap-8")}>
           <Section title="behavior">
-            <Show when={isAuthenticated()}>
-              <Tags />
-              <Presets />
-              <SearchableAutoSetting key="resultSaving" />
-            </Show>
+            <SearchableAutoSetting key="resultSaving" />
             <SearchableAutoSetting key="difficulty" />
             <SearchableAutoSetting key="quickRestart" />
             <SearchableAutoSetting key="repeatQuotes" />
@@ -193,25 +182,6 @@ export function SettingsPage(): JSXElement {
           </Section>
           <Section title="danger zone">
             <ImportExport />
-            <SearchableAutoSetting key="ads" />
-            <SearchableSetting
-              key="cookies"
-              title="update cookie preferences"
-              description="If you changed your mind about which cookies you consent to, you can change your preferences here."
-              fa={{
-                icon: "fa-cookie-bite",
-              }}
-              inputs={
-                <Button
-                  class="w-full"
-                  onClick={() => {
-                    showModal("Cookies");
-                  }}
-                >
-                  open
-                </Button>
-              }
-            />
             <AnimationFpsLimit />
             <SearchableSetting
               key="resetSettings"
@@ -219,7 +189,7 @@ export function SettingsPage(): JSXElement {
               description={
                 <div>
                   Resets settings to the default (but doesn&apos;t touch your
-                  tags and presets).
+                  saved results).
                   <br />
                   <div class="text-error">You can&apos;t undo this!</div>
                 </div>
@@ -252,44 +222,8 @@ export function SettingsPage(): JSXElement {
             />
           </Section>
         </div>
-
-        <AccountSettingsNotice />
       </div>
     </Page>
-  );
-}
-
-function AccountSettingsNotice(): JSXElement {
-  const [dismissed, setDismissed] = useLocalStorage({
-    key: "accountSettingsMessageDismissed",
-    schema: z.boolean(),
-    fallback: false,
-  });
-  return (
-    <Show when={!dismissed()}>
-      <div
-        class={cn(
-          "grid grid-cols-[auto_1fr] items-center gap-4 rounded px-4 py-4 ring-4 ring-sub-alt md:grid-cols-[auto_1fr_auto] md:gap-8",
-          isSettingsSearchActive() && "hidden",
-        )}
-      >
-        <Fa icon="fa-user-cog" class="text-4xl text-sub" />
-        <div>
-          Account settings have moved. You can now access them by hovering over
-          the account button in the top right corner, then clicking
-          &quot;Account settings&quot;.
-        </div>
-        <Button
-          text="go to account settings"
-          href="/account-settings"
-          class="col-span-2 p-4 md:col-span-1"
-          router-link
-          onClick={() => {
-            setDismissed(true);
-          }}
-        />
-      </div>
-    </Show>
   );
 }
 

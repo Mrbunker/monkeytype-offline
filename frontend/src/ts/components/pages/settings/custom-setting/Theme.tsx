@@ -22,7 +22,6 @@ import {
   convertThemeToCustomColors,
 } from "../../../../controllers/theme-controller";
 import { createEffectOn } from "../../../../hooks/effects";
-import { isAuthenticated } from "../../../../states/core";
 import {
   showErrorNotification,
   showNoticeNotification,
@@ -82,13 +81,11 @@ export function Theme(): JSXElement {
 
   const Customs = () => (
     <div class="grid gap-4">
-      <Show when={isAuthenticated()}>
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-2">
-          <For each={customThemes()}>
-            {(theme) => <CustomThemeButton theme={theme} />}
-          </For>
-        </div>
-      </Show>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-2">
+        <For each={customThemes()}>
+          {(theme) => <CustomThemeButton theme={theme} />}
+        </For>
+      </div>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Picker color="bg" />
         <Picker color="main" />
@@ -150,7 +147,7 @@ export function Theme(): JSXElement {
                   newTheme.f = getConfig.customBackgroundFilter;
                 }
 
-                const link = `${window.location.origin}?customTheme=${btoa(
+                const link = `${window.location.origin}${import.meta.env.BASE_URL}?customTheme=${btoa(
                   JSON.stringify(newTheme),
                 )}`;
 
@@ -199,44 +196,30 @@ export function Theme(): JSXElement {
             });
           }}
         />
-        <Show when={isAuthenticated()}>
-          <Button
-            text="save as new"
-            onClick={() => {
-              if (customThemes().length >= 20) {
-                showNoticeNotification("Custom themes limit reached");
-                return;
-              }
+        <Button
+          text="save as new"
+          onClick={() => {
+            if (customThemes().length >= 20) {
+              showNoticeNotification("Custom themes limit reached");
+              return;
+            }
 
-              void addCustomTheme({
-                name: "custom",
-                colors: convertThemeToCustomColors(getTheme()),
+            void addCustomTheme({
+              name: "custom",
+              colors: convertThemeToCustomColors(getTheme()),
+            })
+              .then(() => {
+                showSuccessNotification("Custom theme saved");
               })
-                .then(() => {
-                  showSuccessNotification("Custom theme saved");
-                })
-                .catch((e: unknown) => {
-                  showErrorNotification(
-                    e instanceof Error
-                      ? e.message
-                      : "Failed to save custom theme",
-                  );
-                });
-            }}
-          />
-        </Show>
-        <Show when={!isAuthenticated()}>
-          <Button
-            text="save"
-            onClick={() => {
-              setConfig(
-                "customThemeColors",
-                convertThemeToCustomColors(getTheme()),
-              );
-              showSuccessNotification("Custom theme colors saved");
-            }}
-          />
-        </Show>
+              .catch((e: unknown) => {
+                showErrorNotification(
+                  e instanceof Error
+                    ? e.message
+                    : "Failed to save custom theme",
+                );
+              });
+          }}
+        />
       </div>
     </div>
   );

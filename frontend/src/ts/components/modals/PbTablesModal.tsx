@@ -22,7 +22,7 @@ type PBRow = PBWithMode2 & {
 };
 
 function buildRows(mode: Mode): PBRow[] {
-  const allmode2 = DB.getSnapshot()?.personalBests?.[mode] as
+  const allmode2 = DB.getPracticeStats()?.personalBests?.[mode] as
     | Record<Mode2<Mode>, PBWithMode2[]>
     | undefined;
   if (allmode2 === undefined) return [];

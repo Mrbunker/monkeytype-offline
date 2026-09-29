@@ -1,5 +1,4 @@
 import { setConfig } from "../../config/setters";
-import { isAuthenticated } from "../../states/core";
 import * as CustomThemes from "../../collections/custom-themes";
 import * as ThemeController from "../../controllers/theme-controller";
 import { Command, CommandsSubgroup } from "../types";
@@ -17,17 +16,10 @@ const commands: Command[] = [
     display: "Custom themes...",
     icon: "fa-palette",
     subgroup,
-    available: (): boolean => {
-      return isAuthenticated();
-    },
   },
 ];
 
 export function update(): void {
-  if (!isAuthenticated()) {
-    return;
-  }
-
   subgroup.list = [];
 
   const customThemes = CustomThemes.__nonReactive.getCustomThemes();

@@ -4,12 +4,11 @@ import { restartTestEvent } from "../../../events/test";
 import { getActivePage } from "../../../states/core";
 import { getFocus } from "../../../states/test";
 import { cn } from "../../../utils/cn";
-import { isDevEnvironment } from "../../../utils/env";
 
 export function Logo(): JSXElement {
   return (
     <a
-      href={`${location.origin}/`}
+      href={`${import.meta.env.BASE_URL}#/`}
       class="-m-2 flex h-6 w-max gap-2 rounded-[0.8rem] p-2 focus-visible:**:data-[ui-element='logoSubtext']:text-transparent"
       aria-label="Monkeytype Home"
       router-link
@@ -51,7 +50,7 @@ export function Logo(): JSXElement {
           )}
           data-ui-element="logoSubtext"
         >
-          {isDevEnvironment() ? "localhost" : "monkey see"}
+          offline · unofficial fork
         </div>
         <h1
           class={cn("-mt-[0.11em] text-text transition-colors duration-250", {

@@ -115,7 +115,7 @@ function DeepLinkButton(props: { key: string }) {
             highlight: props.key,
           },
         });
-        const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+        const newUrl = `${window.location.pathname}?${urlParams.toString()}${window.location.hash}`;
         window.history.replaceState({}, "", newUrl);
 
         navigator.clipboard

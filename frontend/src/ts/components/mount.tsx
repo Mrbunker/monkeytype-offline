@@ -5,7 +5,6 @@ import { render } from "solid-js/web";
 import { queryClient } from "../queries";
 import { qsa } from "../utils/dom";
 import { Theme } from "./core/Theme";
-import { DevTools } from "./dev/DevTools";
 import { CommandlineHotkey } from "./hotkeys/CommandlineHotkey";
 import { Footer } from "./layout/footer/Footer";
 import { Header } from "./layout/header/Header";
@@ -13,14 +12,7 @@ import { Overlays } from "./layout/overlays/Overlays";
 import { Modals } from "./modals/Modals";
 import { NotFoundPage } from "./pages/404Page";
 import { AboutPage } from "./pages/AboutPage";
-import { AccountSettingsPage } from "./pages/account-settings/AccountSettingsPage";
 import { AccountPage } from "./pages/account/AccountPage";
-import { MyProfile } from "./pages/account/MyProfile";
-import { FriendsPage } from "./pages/connections/FriendsPage";
-import { LeaderboardPage } from "./pages/leaderboard/LeaderboardPage";
-import { LoginPage } from "./pages/login/LoginPage";
-import { ProfilePage } from "./pages/profile/ProfilePage";
-import { ProfileSearchPage } from "./pages/profile/ProfileSearchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { CapsWarning } from "./pages/test/CapsWarning";
 import { CompositionDisplay } from "./pages/test/CompositionDisplay";
@@ -32,34 +24,23 @@ import { LiveStatsTextTop } from "./pages/test/live-stats/LiveStatsTextTop";
 import { TestModesNotice } from "./pages/test/modes-notice/TestModesNotice";
 import { Monkey } from "./pages/test/Monkey";
 import { OutOfFocusWarning } from "./pages/test/OutOfFocusWarning";
-import { Premid } from "./pages/test/Premid";
 import { TestConfig } from "./pages/test/TestConfig";
-import { Popups } from "./popups/Popups";
 
 const components: Record<string, () => JSXElement> = {
   footer: () => <Footer />,
   aboutpage: () => <AboutPage />,
   settingspage: () => <SettingsPage />,
   accountpage: () => <AccountPage />,
-  loginpage: () => <LoginPage />,
-  leaderboardpage: () => <LeaderboardPage />,
-  profilepage: () => <ProfilePage />,
-  profilesearchpage: () => <ProfileSearchPage />,
-  myprofile: () => <MyProfile />,
   modals: () => <Modals />,
-  popups: () => <Popups />,
   overlays: () => <Overlays />,
   theme: () => <Theme />,
   header: () => <Header />,
-  devtools: () => <DevTools />,
   testconfig: () => <TestConfig />,
   commandlinehotkey: () => <CommandlineHotkey />,
   testmodesnotice: () => <TestModesNotice />,
   capswarning: () => <CapsWarning />,
   compositiondisplay: () => <CompositionDisplay />,
-  friendspage: () => <FriendsPage />,
   notfoundpage: () => <NotFoundPage />,
-  accountsettingspage: () => <AccountSettingsPage />,
   keymap: () => <Keymap />,
   monkey: () => <Monkey />,
   outoffocuswarning: () => <OutOfFocusWarning />,
@@ -67,7 +48,6 @@ const components: Record<string, () => JSXElement> = {
   livestatstexttop: () => <LiveStatsTextTop />,
   livestatstextbottom: () => <LiveStatsTextBottom />,
   bartimerprogress: () => <BarTimerProgress />,
-  premid: () => <Premid />,
 };
 
 function mountToMountpoint(name: string, component: () => JSXElement): void {

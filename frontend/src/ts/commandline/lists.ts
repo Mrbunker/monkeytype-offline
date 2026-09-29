@@ -1,15 +1,12 @@
 import MinBurstCommands from "./lists/min-burst";
 import BailOutCommands from "./lists/bail-out";
-import QuoteFavoriteCommands from "./lists/quote-favorites";
 import NavigationCommands from "./lists/navigation";
 import ResultScreenCommands from "./lists/result-screen";
 import CustomBackgroundCommands from "./lists/custom-background";
 import FontFamilyCommands from "./lists/font-family";
 import CustomBackgroundFilterCommands from "./lists/background-filter";
 import AddOrRemoveThemeToFavorite from "./lists/add-or-remove-theme-to-favorites";
-import TagsCommands from "./lists/tags";
 import CustomThemesListCommands from "./lists/custom-themes-list";
-import PresetsCommands from "./lists/presets";
 import FunboxCommands from "./lists/funbox";
 import ThemesCommands from "./lists/themes";
 import LoadChallengeCommands from "./lists/load-challenge";
@@ -23,12 +20,9 @@ import {
   clearAllNotifications,
   showSuccessNotification,
 } from "../states/notifications";
-import * as VideoAdPopup from "../popups/video-ad-popup";
 import { Command, CommandlineListKey, CommandsSubgroup } from "./types";
 import { buildCommandForConfigKey } from "./util";
 import { CommandlineConfigMetadataObject } from "./commandline-metadata";
-import { isAuthAvailable, signOut } from "../firebase";
-import { isAuthenticated } from "../states/core";
 import { ConfigKey } from "@monkeytype/schemas/configs";
 import {
   hideFpsCounter,
@@ -36,8 +30,6 @@ import {
 } from "../components/layout/overlays/FpsCounter";
 import { applyConfigFromJson } from "../config/lifecycle";
 import { getLastEventLog } from "../states/test";
-
-const adsCommands = buildCommands("ads");
 
 export const commands: CommandsSubgroup = {
   title: "",
@@ -73,7 +65,6 @@ export const commands: CommandsSubgroup = {
       },
       shouldFocusTestUI: false,
     },
-    ...QuoteFavoriteCommands,
     ...BailOutCommands,
     {
       id: "shareTestSettings",
@@ -85,8 +76,6 @@ export const commands: CommandsSubgroup = {
     },
 
     //account
-    ...TagsCommands,
-    ...PresetsCommands,
 
     //behavior
     ...buildCommands(
@@ -207,20 +196,11 @@ export const commands: CommandsSubgroup = {
     ),
 
     //danger zone
-    ...adsCommands,
 
     //other
     ...LoadChallengeCommands,
     ...NavigationCommands,
-    {
-      id: "watchVideoAd",
-      display: "Watch video ad",
-      alias: "support donate",
-      icon: "fa-ad",
-      exec: (): void => {
-        void VideoAdPopup.show();
-      },
-    },
+
     {
       id: "importSettingsJSON",
       display: "Import settings JSON",
@@ -251,26 +231,7 @@ export const commands: CommandsSubgroup = {
         clearAllNotifications();
       },
     },
-    {
-      id: "clearSwCache",
-      display: "Clear SW cache",
-      icon: "fa-cog",
-      exec: async (): Promise<void> => {
-        const clist = await caches.keys();
-        for (const name of clist) {
-          await caches.delete(name);
-        }
-        window.location.reload();
-      },
-    },
-    {
-      id: "getSwCache",
-      display: "Get SW cache",
-      icon: "fa-cog",
-      exec: async (): Promise<void> => {
-        alert(await caches.keys());
-      },
-    },
+
     {
       id: "copyResultStats",
       display: "Copy last event log (result data)",
@@ -318,48 +279,6 @@ export const commands: CommandsSubgroup = {
         ],
       },
     },
-    {
-      id: "fixSkillIssue",
-      display: "Fix skill issue",
-      icon: "fa-wrench",
-      visible: false,
-      exec: async (): Promise<void> => {
-        // window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-        (document.querySelector("body") as HTMLElement).innerHTML = `
-          <div class="centerbox" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events: none;width: 100%; max-width: 800px;">
-            <h1 style="font-size:3rem;margin-bottom:1rem;">Fixing skill issue...</h1>
-            <iframe style="width: 100%; aspect-ratio: 4 / 3" src="https://www.youtube.com/embed/dQw4w9WgXcQ?si=Kr48u8WHcwvX95G7&amp;controls=0&autoplay=1&mute=0&disablekb=1&fs=0&modestbranding=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-          </div>
-        `;
-        setTimeout(() => {
-          document
-            .querySelector(".centerbox")
-            ?.insertAdjacentHTML(
-              "beforeend",
-              `<p style="margin-top:1rem;font-size:1.5rem;">If your skill issue is not fixed yet, please wait a bit longer...</p>`,
-            );
-        }, 5000);
-      },
-    },
-    {
-      id: "joinDiscord",
-      display: "Join the Discord server",
-      icon: "fa-users",
-      exec: (): void => {
-        window.open("https://discord.gg/monkeytype");
-      },
-    },
-    {
-      id: "signOut",
-      display: "Sign out",
-      icon: "fa-sign-out-alt",
-      exec: (): void => {
-        void signOut();
-      },
-      available: () => {
-        return isAuthAvailable() && isAuthenticated();
-      },
-    },
   ],
 };
 
@@ -368,8 +287,7 @@ const lists: Record<CommandlineListKey, CommandsSubgroup | undefined> = {
   loadChallenge: LoadChallengeCommands[0]?.subgroup,
   minBurst: MinBurstCommands[0]?.subgroup,
   funbox: FunboxCommands[0]?.subgroup,
-  tags: TagsCommands[0]?.subgroup,
-  ads: adsCommands[0]?.subgroup,
+  tags: undefined,
 };
 
 const subgroupByConfigKey = Object.fromEntries(

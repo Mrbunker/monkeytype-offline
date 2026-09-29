@@ -1,8 +1,4 @@
-import {
-  ConfigSchema,
-  CustomBackgroundSchema,
-} from "@monkeytype/schemas/configs";
-import { createForm } from "@tanstack/solid-form";
+import { ConfigSchema } from "@monkeytype/schemas/configs";
 import { createResource, JSXElement, For, Show } from "solid-js";
 
 import {
@@ -12,32 +8,14 @@ import {
 import { setConfig } from "../../../../config/setters";
 import { getConfig } from "../../../../config/store";
 import { applyCustomBackground } from "../../../../controllers/theme-controller";
-import { useSavedIndicator } from "../../../../hooks/useSavedIndicator";
 import { showNoticeNotification } from "../../../../states/notifications";
 import FileStorage from "../../../../utils/file-storage";
 import { getOptions } from "../../../../utils/zod";
 import { Button } from "../../../common/Button";
 import { Fa } from "../../../common/Fa";
-import { Separator } from "../../../common/Separator";
-import { InputField } from "../../../ui/form/InputField";
-import { fromSchema } from "../../../ui/form/utils";
 import { SearchableSetting } from "../SearchableSetting";
 
 export function CustomBackground(): JSXElement {
-  const savedIndicator = useSavedIndicator();
-
-  const form = createForm(() => ({
-    defaultValues: {
-      customBackground: getConfig.customBackground,
-    },
-    onSubmit: ({ value }) => {
-      const val = value.customBackground;
-      if (val === getConfig.customBackground) return;
-      savedIndicator.flash();
-      setConfig("customBackground", val);
-    },
-  }));
-
   const [hasLocalBackground] = createResource(
     () => FileStorage.track("LocalBackgroundFile"),
     async () => FileStorage.hasFile("LocalBackgroundFile"),
@@ -128,38 +106,9 @@ export function CustomBackground(): JSXElement {
                 <Fa icon="fa-file-import" fixedWidth />
                 use local image
               </label>
-              <Separator text="or" />
             </>
           </Show>
-          <Show when={!hasLocalBackground()}>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                void form.handleSubmit();
-              }}
-            >
-              <form.Field
-                name="customBackground"
-                validators={{
-                  onChange: fromSchema(CustomBackgroundSchema),
-                  onBlur: () => {
-                    void form.handleSubmit();
-                  },
-                }}
-                children={(field) => (
-                  <div class="relative">
-                    <InputField
-                      field={field}
-                      placeholder={"image url"}
-                      type="text"
-                    />
-                    <savedIndicator.component />
-                  </div>
-                )}
-              />
-            </form>
-          </Show>
+
           <div class="grid grid-cols-[repeat(auto-fit,minmax(4rem,1fr))] gap-2">
             <For each={getOptions(ConfigSchema.shape.customBackgroundSize)}>
               {(option) => {

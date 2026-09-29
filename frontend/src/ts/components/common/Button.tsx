@@ -6,6 +6,7 @@ import { Fa, FaProps } from "./Fa";
 
 type BaseProps = {
   text?: string;
+  "aria-label"?: string;
   fa?: FaProps;
   class?: string;
   variant?: "text" | "button";
@@ -97,6 +98,7 @@ export function Button(props: ButtonProps | AnchorProps): JSXElement {
           {...balloonHtmlProps()}
           {...(props["router-link"] ? { "router-link": "" } : {})}
           disabled={props.disabled ?? false}
+          aria-label={props["aria-label"]}
           data-ui-variant={variant()}
           data-ui-element="button"
           tabIndex={props.tabIndex ?? 0}
@@ -124,6 +126,7 @@ export function Button(props: ButtonProps | AnchorProps): JSXElement {
         onClick={(e) => props.onClick?.(e)}
         onMouseEnter={(e) => props.onMouseEnter?.(e)}
         onMouseLeave={(e) => props.onMouseLeave?.(e)}
+        aria-label={props["aria-label"]}
         data-ui-variant={variant()}
         data-ui-element="button"
         {...props.dataset}

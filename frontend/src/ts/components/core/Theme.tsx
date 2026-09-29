@@ -7,6 +7,7 @@ import { useRefWithUtils } from "../../hooks/useRefWithUtils";
 import { hideLoaderBar, showLoaderBar } from "../../states/loader-bar";
 import { showNoticeNotification } from "../../states/notifications";
 import { getTheme } from "../../states/theme";
+import { assetUrl } from "../../utils/asset-url";
 import { FavIcon } from "./FavIcon";
 
 export function Theme(): JSXElement {
@@ -69,7 +70,10 @@ export function Theme(): JSXElement {
     } else {
       hideLoaderBar();
     }
-    linkEl()?.setAttribute("href", hasCss ? `/themes/${name}.css` : "");
+    linkEl()?.setAttribute(
+      "href",
+      hasCss ? assetUrl(`themes/${name}.css`) : "",
+    );
   });
 
   return (

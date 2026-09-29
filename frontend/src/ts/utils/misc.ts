@@ -1,7 +1,6 @@
 import { lastElementFromArray } from "./arrays";
 import { Config } from "@monkeytype/schemas/configs";
 import { Mode, Mode2, PersonalBests } from "@monkeytype/schemas/shared";
-import { Result } from "@monkeytype/schemas/results";
 import { RankAndCount } from "@monkeytype/schemas/users";
 import { roundTo2 } from "@monkeytype/util/numbers";
 import { animate, AnimationParams } from "animejs";
@@ -258,7 +257,9 @@ export function getMode2<M extends keyof PersonalBests>(
   return retVal as Mode2<M>;
 }
 
-export async function downloadResultsCSV(array: Result<Mode>[]): Promise<void> {
+export async function downloadResultsCSV(
+  array: import("../offline/types").PracticeResult<Mode>[],
+): Promise<void> {
   const csvString = [
     [
       "_id",

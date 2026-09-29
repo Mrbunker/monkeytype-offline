@@ -1,7 +1,6 @@
 import * as TestWords from "./test-words";
 import { Config } from "../config/store";
 import * as DB from "../db";
-import { getActiveTagsPB } from "../collections/tags";
 import * as Misc from "../utils/misc";
 import { configEvent } from "../events/config";
 import { getActiveFunboxes } from "./funbox/list";
@@ -80,16 +79,6 @@ export async function init(): Promise<void> {
         Config.lazyMode,
         getActiveFunboxes(),
       )?.wpm ?? 0;
-  } else if (Config.paceCaret === "tagPb") {
-    wpm = getActiveTagsPB(
-      Config.mode,
-      mode2,
-      Config.punctuation,
-      Config.numbers,
-      Config.language,
-      Config.difficulty,
-      Config.lazyMode,
-    );
   } else if (Config.paceCaret === "average") {
     wpm = Math.round((await getUserAverage10Once({ ...Config, mode2 })).wpm);
   } else if (Config.paceCaret === "daily") {

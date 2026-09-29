@@ -2,12 +2,12 @@ import { createMemo, JSXElement } from "solid-js";
 
 import { useUserAverage10LiveQuery } from "../../../../collections/results";
 import { getConfig } from "../../../../config/store";
-import { getFormatting, isAuthenticated } from "../../../../states/core";
+import { getFormatting } from "../../../../states/core";
 import { Notice } from "./Notice";
 
 export function AverageNotice(): JSXElement {
   const last10 = useUserAverage10LiveQuery({
-    isEnabled: () => isAuthenticated() && getConfig.showAverage !== "off",
+    isEnabled: () => getConfig.showAverage !== "off",
   });
 
   const displayText = createMemo(() => {
@@ -34,7 +34,7 @@ export function AverageNotice(): JSXElement {
 
   return (
     <Notice
-      when={isAuthenticated() && getConfig.showAverage !== "off"}
+      when={getConfig.showAverage !== "off"}
       icon="fa-chart-bar"
       openCommandline="showAverage"
       text={displayText()}

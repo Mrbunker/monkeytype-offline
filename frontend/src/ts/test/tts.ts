@@ -10,6 +10,15 @@ export async function setLanguage(lang = Config.language): Promise<void> {
   const language = await JSONData.getLanguage(lang);
   const bcp = language.bcp47 ?? "en-US";
   voice.lang = bcp;
+  const localVoice = window.speechSynthesis
+    .getVoices()
+    .find(
+      (candidate) =>
+        candidate.localService &&
+        candidate.lang.toLowerCase().split("-")[0] ===
+          bcp.toLowerCase().split("-")[0],
+    );
+  voice.voice = localVoice ?? null;
 }
 
 export async function init(): Promise<void> {
@@ -25,7 +34,7 @@ export async function speak(text: string): Promise<void> {
   window.speechSynthesis.cancel();
   if (voice === undefined) await init();
 
-  if (voice !== undefined) {
+  if (voice !== undefined && voice.voice?.localService === true) {
     voice.text = text;
     window.speechSynthesis.speak(voice);
   }

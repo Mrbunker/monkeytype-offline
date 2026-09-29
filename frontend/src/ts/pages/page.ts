@@ -11,13 +11,7 @@ export type PageName =
   | "settings"
   | "about"
   | "account"
-  | "login"
-  | "profile"
-  | "profileSearch"
-  | "404"
-  | "accountSettings"
-  | "leaderboards"
-  | "friends";
+  | "404";
 
 type Options<T> = {
   params?: Record<string, string>;
@@ -155,7 +149,7 @@ export class PageWithUrlParams<T, U extends UrlParamsSchema> extends Page<T> {
       schema: this.urlSchema,
       data: params,
     });
-    const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+    const newUrl = `${window.location.pathname}?${urlParams.toString()}${window.location.hash}`;
     window.history.replaceState({}, "", newUrl);
   }
 

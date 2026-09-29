@@ -9,7 +9,7 @@ import {
 import { areUnsortedArraysEqual } from "../utils/arrays";
 import { Config } from "../config/store";
 import { get as getTypingSpeedUnit } from "../utils/typing-speed-units";
-import { getActivePage, isAuthenticated } from "../states/core";
+import { getActivePage } from "../states/core";
 import { Fonts } from "../constants/fonts";
 import { KnownFontName } from "@monkeytype/schemas/fonts";
 import * as UI from "../ui";
@@ -20,6 +20,7 @@ import { typedKeys } from "@monkeytype/util/objects";
 // eventually this file should be fully merged into config metadata, probably under the 'commandline' property
 
 type ConfigKeysWithoutCommands =
+  | "customBackground"
   | "minWpmCustomSpeed"
   | "minAccCustom"
   | "minBurstCustomSpeed"
@@ -154,12 +155,6 @@ export const commandlineConfigMetadata: CommandlineConfigMetadataObject = {
     subgroup: {
       options: [[0, 1, 2, 3], [0], [1], [2], [3], [-3]],
       configValueMode: () => "include",
-      isAvailable: (value) => {
-        if (value[0] === -3) {
-          return isAuthenticated;
-        }
-        return undefined;
-      },
       display: (value) => {
         if (areUnsortedArraysEqual(value, [0, 1, 2, 3])) {
           return "all";
@@ -488,7 +483,7 @@ export const commandlineConfigMetadata: CommandlineConfigMetadataObject = {
   paceCaret: {
     display: "Pace caret mode...",
     subgroup: {
-      options: ["off", "pb", "tagPb", "last", "average", "daily"],
+      options: ["off", "pb", "last", "average", "daily"],
       afterExec: () => {
         void TestLogic.restart();
       },
@@ -699,9 +694,6 @@ export const commandlineConfigMetadata: CommandlineConfigMetadataObject = {
       options: "fromSchema",
     },
   },
-  customBackground: {
-    input: {},
-  },
   customBackgroundSize: {
     subgroup: {
       options: "fromSchema",
@@ -710,8 +702,6 @@ export const commandlineConfigMetadata: CommandlineConfigMetadataObject = {
   randomTheme: {
     subgroup: {
       options: "fromSchema",
-      isAvailable: (value) =>
-        value === "custom" ? isAuthenticated : undefined,
     },
   },
 
@@ -768,9 +758,4 @@ export const commandlineConfigMetadata: CommandlineConfigMetadataObject = {
   },
 
   //danger zone
-  ads: {
-    subgroup: {
-      options: "fromSchema",
-    },
-  },
 };
