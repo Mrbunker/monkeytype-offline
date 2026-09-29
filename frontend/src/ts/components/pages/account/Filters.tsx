@@ -1,101 +1,30 @@
 import { QuoteLength } from "@monkeytype/schemas/configs";
-import { PresetNameSchema } from "@monkeytype/schemas/presets";
 import {
   ResultFilters,
   ResultFiltersGroupItem,
   ResultFiltersKeys,
 } from "@monkeytype/schemas/users";
 import { createMemo, createSignal, For, JSXElement, Show } from "solid-js";
-import { SetStoreFunction, unwrap } from "solid-js/store";
-import { z } from "zod";
+import { SetStoreFunction } from "solid-js/store";
 
-import {
-  deleteResultFilterPreset,
-  insertResultFilterPreset,
-  useResultFilterPresetsLiveQuery,
-} from "../../../collections/result-filter-presets";
-import { type TagItem, useTagsLiveQuery } from "../../../collections/tags";
 import { getConfig } from "../../../config/store";
 import defaultResultFilters from "../../../constants/default-result-filters";
-import { showSimpleModal } from "../../../states/simple-modal";
 import { FaSolidIcon } from "../../../types/font-awesome";
 import { cn } from "../../../utils/cn";
-import { createErrorMessage } from "../../../utils/error";
 import {
   getLanguageDisplayString,
-  normalizeName,
   replaceUnderscoresWithSpaces,
 } from "../../../utils/strings";
 import { AnimeShow } from "../../common/anime";
-import AsyncContent from "../../common/AsyncContent";
 import { Button } from "../../common/Button";
 import { H3 } from "../../common/Headers";
 import { Separator } from "../../common/Separator";
 import SlimSelect from "../../ui/SlimSelect";
-import { verifyResultFiltersStructure } from "./utils";
 
 export function Filters(props: {
   filters: ResultFilters;
   onChangeFilters: SetStoreFunction<ResultFilters>;
 }): JSXElement {
-  const FilterPresets = (props: {
-    presets: ResultFilters[];
-    onChangeFilters: SetStoreFunction<ResultFilters>;
-  }): JSXElement => {
-    return (
-      <Show when={props.presets.length > 0}>
-        <div>
-          <H3 fa={{ icon: "fa-sliders-h" }} text="filter presets" />
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <For each={props.presets}>
-              {(preset) => (
-                <div class="flex w-full flex-row gap-2">
-                  <Button
-                    class="w-full"
-                    text={replaceUnderscoresWithSpaces(preset.name)}
-                    onClick={() =>
-                      props.onChangeFilters(
-                        verifyResultFiltersStructure(unwrap(preset)),
-                      )
-                    }
-                  />
-                  <Button
-                    fa={{ icon: "fa-trash", fixedWidth: true }}
-                    onClick={() =>
-                      showSimpleModal({
-                        title: "Delete Filter Preset",
-                        buttonText: "delete",
-                        text: `Are you sure you want to delete preset ${preset.name}?`,
-
-                        execFn: async () => {
-                          try {
-                            await deleteResultFilterPreset({
-                              presetId: preset._id,
-                            });
-                            return {
-                              status: "success",
-                              message: `Filter preset removed`,
-                            };
-                          } catch (e) {
-                            const message = createErrorMessage(
-                              e,
-                              "Error deleting filter preset",
-                            );
-                            return { status: "error", message };
-                          }
-                        },
-                      })
-                    }
-                  />
-                </div>
-              )}
-            </For>
-          </div>
-        </div>
-      </Show>
-    );
-  };
-
   const Dropdown = <
     T extends ResultFiltersKeys,
     K extends keyof ResultFilters[T],
@@ -205,7 +134,7 @@ export function Filters(props: {
                         boolean
                       >),
                       // oxlint-disable-next-line typescript/strict-boolean-expressions
-                      [item.id]: !props.filters[options.group][item.id],
+                      [item.id]: props.filters[options.group][item.id] !== true,
                     });
                   }
                 }}
@@ -217,7 +146,6 @@ export function Filters(props: {
     );
   };
 
-  const tags = useTagsLiveQuery();
   const [isShowAdvanced, setShowAdvanced] = createSignal(false);
 
   const setFilter = (
@@ -227,71 +155,23 @@ export function Filters(props: {
     props.onChangeFilters(key, value);
   };
 
-  const presetsQuery = useResultFilterPresetsLiveQuery();
-
   return (
     <div class="flex flex-col gap-8">
-      <AsyncContent collections={{ presetsQuery }}>
-        {({ presetsQueryData }) => (
-          <FilterPresets
-            presets={presetsQueryData()}
-            onChangeFilters={props.onChangeFilters}
-          />
-        )}
-      </AsyncContent>
       <div>
         <H3 fa={{ icon: "fa-filter" }} text="filters" />
         <div class="mb-4 grid gap-4 sm:grid-cols-2 lg:flex lg:justify-evenly [&>button]:w-full">
           <Button
             text="all"
-            onClick={() => props.onChangeFilters(fromDefaultSettings(tags()))}
+            onClick={() => props.onChangeFilters(fromDefaultSettings())}
           />
           <Button
             text="current settings"
-            onClick={() => props.onChangeFilters(fromCurrentSettings(tags()))}
+            onClick={() => props.onChangeFilters(fromCurrentSettings())}
           />
           <Button
             text="advanced"
             active={isShowAdvanced()}
             onClick={() => setShowAdvanced((old) => !old)}
-          />
-          <Button
-            text="save as preset"
-            onClick={() =>
-              showSimpleModal({
-                title: "New Filter Preset",
-                buttonText: "add",
-                schema: z.object({ name: PresetNameSchema }),
-                inputs: {
-                  name: {
-                    placeholder: "Preset Name",
-                    type: "text",
-                    preprocess: normalizeName,
-                  },
-                },
-
-                execFn: async ({ name }) => {
-                  const filters = { ...unwrap(props.filters), _id: "tmp" };
-
-                  try {
-                    await insertResultFilterPreset({
-                      name: normalizeName(name),
-                      filters,
-                    });
-                    return {
-                      status: "success",
-                      message: "Filter preset created",
-                    };
-                  } catch (e) {
-                    const message = createErrorMessage(
-                      e,
-                      "Error creating filter preset",
-                    );
-                    return { status: "error", message };
-                  }
-                },
-              })
-            }
           />
         </div>
         <Separator class="mb-4 block lg:hidden" />
@@ -328,24 +208,12 @@ export function Filters(props: {
             <ButtonGroup text="punctuation" icon="fa-at" group="punctuation" />
             <ButtonGroup text="numbers" icon="fa-hashtag" group="numbers" />
 
-            <Show when={tags().length > 0}>
-              <Dropdown
-                icon="fa-tag"
-                text="tags"
-                group="tags"
-                format={(tag) =>
-                  tag === "none"
-                    ? "no tag"
-                    : (tags().find((it) => it._id === tag)?.name ?? tag)
-                }
-              />
-            </Show>
             <Dropdown
               icon="fa-gamepad"
               text="funbox"
               group="funbox"
               class={cn("", {
-                "col-span-2": tags().length === 0,
+                "col-span-2": true,
               })}
               format={(val) =>
                 val === "none" ? "no funbox" : replaceUnderscoresWithSpaces(val)
@@ -377,7 +245,7 @@ function noFilters(): ResultFilters {
   return filters;
 }
 
-function fromCurrentSettings(tags: TagItem[]): ResultFilters {
+function fromCurrentSettings(): ResultFilters {
   const filters = noFilters();
 
   filters.pb.no = true;
@@ -440,24 +308,15 @@ function fromCurrentSettings(tags: TagItem[]): ResultFilters {
 
   filters.tags["none"] = true;
 
-  tags.forEach((tag) => {
-    if (tag.active) {
-      filters.tags["none"] = false;
-      filters.tags[tag._id] = true;
-    }
-  });
-
   filters.date.all = true;
 
   return filters;
 }
 
-function fromDefaultSettings(tags: TagItem[]): ResultFilters {
+function fromDefaultSettings(): ResultFilters {
   const tagFilters: Record<string, boolean> = {};
   tagFilters["none"] = true;
-  tags.forEach((tag) => {
-    tagFilters[tag._id] = true;
-  });
+
   return {
     ...defaultResultFilters,
     tags: tagFilters,

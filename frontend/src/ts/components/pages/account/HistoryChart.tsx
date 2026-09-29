@@ -1,11 +1,10 @@
 import { AccountChart } from "@monkeytype/schemas/configs";
-import { Mode } from "@monkeytype/schemas/shared";
 import { format as dateFormat } from "date-fns/format";
 import { createMemo, JSXElement, Show } from "solid-js";
 
 import { setConfig } from "../../../config/setters";
 import { getConfig } from "../../../config/store";
-import { SnapshotResult } from "../../../constants/default-snapshot";
+import { PracticeResult } from "../../../offline/types";
 import { getFormatting } from "../../../states/core";
 import { getTheme } from "../../../states/theme";
 import { blendTwoHexColors } from "../../../utils/colors";
@@ -20,7 +19,7 @@ export type HistoryChartClickEvent = {
   _id: string;
 };
 export function HistoryChart(props: {
-  results: SnapshotResult<Mode>[];
+  results: PracticeResult[];
   beginAtZero: boolean;
   typingSpeedUnit: TypingSpeedUnitSettings;
   format: Formatting;
@@ -350,10 +349,13 @@ export function HistoryChart(props: {
   );
 }
 
-function Trend(props: { results: SnapshotResult<Mode>[] }): JSXElement {
+function Trend(props: { results: PracticeResult[] }): JSXElement {
   const format = getFormatting;
 
   const trend = createMemo(() => {
+    if (props.results.length < 2) {
+      return "Complete more tests to see your speed trend.";
+    }
     const line = findLineByLeastSquares(
       props.results.map((it) => it.wpm).reverse(),
     );
@@ -365,6 +367,7 @@ function Trend(props: { results: SnapshotResult<Mode>[] }): JSXElement {
 
     const wpmChange = line[1][1] - line[0][1];
     const wpmChangePerHour = wpmChange * (3600 / totalSecondsFiltered);
+    if (!Number.isFinite(wpmChangePerHour)) return undefined;
     const plus = wpmChangePerHour > 0 ? "+" : "";
 
     return `Speed change per hour spent typing: ${plus}${format().typingSpeed(wpmChangePerHour, { showDecimalPlaces: true })} ${format().typingSpeedUnit}`;

@@ -13,7 +13,7 @@ import {
 import * as FunboxValidation from "../../src/ts/config/funbox-validation";
 import * as ConfigValidation from "../../src/ts/config/validation";
 import { configEvent } from "../../src/ts/events/config";
-import * as ApeConfig from "../../src/ts/ape/config";
+import { configLS } from "../../src/ts/config/persistence";
 import * as Notifications from "../../src/ts/states/notifications";
 import * as TestState from "../../src/ts/states/test";
 
@@ -36,7 +36,7 @@ describe("Config", () => {
       "isConfigValueValid",
     );
     const dispatchConfigEventMock = vi.spyOn(configEvent, "dispatch");
-    const dbSaveConfigMock = vi.spyOn(ApeConfig, "saveConfig");
+    const localSaveConfigMock = vi.spyOn(configLS, "set");
     const notificationAddMock = vi.spyOn(
       Notifications,
       "showNoticeNotification",
@@ -49,7 +49,7 @@ describe("Config", () => {
       canSetConfigWithCurrentFunboxesMock,
       isConfigValueValidMock,
       dispatchConfigEventMock,
-      dbSaveConfigMock,
+      localSaveConfigMock,
       notificationAddMock,
       miscReloadAfterMock,
       miscTriggerResizeMock,
@@ -62,7 +62,7 @@ describe("Config", () => {
 
       isConfigValueValidMock.mockReturnValue(true);
       canSetConfigWithCurrentFunboxesMock.mockReturnValue(true);
-      dbSaveConfigMock.mockResolvedValue();
+      localSaveConfigMock.mockReturnValue(true);
       stateIsTestActiveMock.mockReturnValue(true);
 
       replaceConfig({});
@@ -229,7 +229,9 @@ describe("Config", () => {
       await vi.advanceTimersByTimeAsync(2500);
 
       //save
-      expect(dbSaveConfigMock).toHaveBeenCalledWith({ numbers: true });
+      expect(localSaveConfigMock).toHaveBeenCalledWith(
+        expect.objectContaining({ numbers: true }),
+      );
     });
 
     it("saves configOverride values to localstorage if nosave=false", async () => {
@@ -244,10 +246,12 @@ describe("Config", () => {
       await vi.advanceTimersByTimeAsync(2500);
 
       //save
-      expect(dbSaveConfigMock).toHaveBeenCalledWith({
-        minWpmCustomSpeed: 120,
-        minWpm: "custom",
-      });
+      expect(localSaveConfigMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          minWpmCustomSpeed: 120,
+          minWpm: "custom",
+        }),
+      );
     });
 
     it("does not save to localstorage if nosave=true", async () => {
@@ -264,7 +268,7 @@ describe("Config", () => {
       //wait for debounce
       await vi.advanceTimersByTimeAsync(2500);
 
-      expect(dbSaveConfigMock).not.toHaveBeenCalled();
+      expect(localSaveConfigMock).not.toHaveBeenCalled();
     });
 
     it("dispatches event on set", () => {
@@ -305,21 +309,6 @@ describe("Config", () => {
       Config.setConfig("maxLineWidth", 50, { nosave: true });
 
       expect(miscTriggerResizeMock).not.toHaveBeenCalled();
-    });
-
-    it("calls afterSet", () => {
-      //GIVEN
-      isDevEnvironmentMock.mockReturnValue(false);
-      replaceConfig({ ads: "off" });
-
-      //WHEN
-      Config.setConfig("ads", "sellout");
-
-      //THEN
-      expect(notificationAddMock).toHaveBeenCalledWith(
-        "Ad settings changed. Refreshing...",
-      );
-      expect(miscReloadAfterMock).toHaveBeenCalledWith(3);
     });
   });
 

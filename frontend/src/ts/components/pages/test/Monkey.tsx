@@ -3,6 +3,7 @@ import { mapRange } from "@monkeytype/util/numbers";
 import { getConfig } from "../../../config/store";
 import { getMonkeyState } from "../../../states/monkey";
 import { currentLiveStats, isTestActive } from "../../../states/test";
+import { assetUrl } from "../../../utils/asset-url";
 import { AnimeShow } from "../../common/anime";
 
 const MIN_WPM = 130;
@@ -32,19 +33,19 @@ export function Monkey() {
     return (
       <>
         <img
-          src={`/images/monkey/m1${suffix ?? ""}.png`}
+          src={assetUrl(`/images/monkey/m1${suffix ?? ""}.png`)}
           class={`absolute inset-0 ${cur === "left" ? "visible" : "hidden"}`}
         />
         <img
-          src={`/images/monkey/m2${suffix ?? ""}.png`}
+          src={assetUrl(`/images/monkey/m2${suffix ?? ""}.png`)}
           class={`absolute inset-0 ${cur === "right" ? "visible" : "hidden"}`}
         />
         <img
-          src={`/images/monkey/m3${suffix ?? ""}.png`}
+          src={assetUrl(`/images/monkey/m3${suffix ?? ""}.png`)}
           class={`absolute inset-0 ${cur === "none" ? "visible" : "hidden"}`}
         />
         <img
-          src={`/images/monkey/m4${suffix ?? ""}.png`}
+          src={assetUrl(`/images/monkey/m4${suffix ?? ""}.png`)}
           class={`absolute inset-0 ${cur === "both" ? "visible" : "hidden"}`}
         />
       </>

@@ -289,30 +289,7 @@ const list: Record<FunboxName, FunboxMetadata> = {
     frontendFunctions: ["rememberSettings"],
     name: "nospace",
   },
-  poetry: {
-    description: "Practice typing some beautiful prose.",
-    canGetPb: false,
-    difficultyLevel: 0,
-    properties: ["noInfiniteDuration", "ignoresLanguage"],
-    frontendForcedConfig: {
-      punctuation: [false],
-      numbers: [false],
-    },
-    frontendFunctions: ["pullSection"],
-    name: "poetry",
-  },
-  wikipedia: {
-    description: "Practice typing wikipedia sections.",
-    canGetPb: false,
-    difficultyLevel: 0,
-    properties: ["noInfiniteDuration", "ignoresLanguage"],
-    frontendForcedConfig: {
-      punctuation: [false],
-      numbers: [false],
-    },
-    frontendFunctions: ["pullSection"],
-    name: "wikipedia",
-  },
+
   weakspot: {
     description: "Focus on slow and mistyped letters.",
     canGetPb: false,

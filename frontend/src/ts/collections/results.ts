@@ -1,4 +1,5 @@
-import { ResultMinified } from "@monkeytype/schemas/results";
+import { getLocalResults } from "../offline/state";
+import { LocalResult } from "../offline/results";
 import { Difficulty, Mode, Mode2 } from "@monkeytype/schemas/shared";
 import { ResultFilters } from "@monkeytype/schemas/users";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
@@ -7,7 +8,6 @@ import {
   BTreeIndex,
   count,
   createCollection,
-  createOptimisticAction,
   eq,
   gte,
   inArray,
@@ -22,39 +22,29 @@ import {
 } from "@tanstack/solid-db";
 import { queryOptions } from "@tanstack/solid-query";
 import { Accessor, createMemo } from "solid-js";
-import Ape from "../ape";
-import { SnapshotResult } from "../constants/default-snapshot";
+import { PracticeResult } from "../offline/types";
 import { createEffectOn } from "../hooks/effects";
 import { queryClient } from "../queries";
 import { baseKey } from "../queries/utils/keys";
-import { isAuthenticated } from "../states/core";
-import { getLastResult, setLastResult } from "../states/snapshot";
-import {
-  getActiveTagsOnce,
-  getTagsOnce,
-  reconcileLocalTagPB,
-  saveLocalTagPB,
-  useActiveTagsLiveQuery,
-} from "./tags";
-import { applyIdWorkaround } from "./utils/misc";
+import { setLastResult } from "../offline/stats";
 import { getConfig } from "../config/store";
 import { getMode2 } from "../utils/misc";
 import { getCurrentQuote } from "../states/test";
 import { removeLanguageSize } from "../utils/strings";
 
 export type ResultsQueryState = {
-  difficulty: SnapshotResult<Mode>["difficulty"][];
-  pb: SnapshotResult<Mode>["isPb"][];
-  mode: SnapshotResult<Mode>["mode"][];
+  difficulty: PracticeResult["difficulty"][];
+  pb: PracticeResult["isPb"][];
+  mode: PracticeResult["mode"][];
   words: ("10" | "25" | "50" | "100" | "custom")[];
   time: ("15" | "30" | "60" | "120" | "custom")[];
-  punctuation: SnapshotResult<Mode>["punctuation"][];
-  numbers: SnapshotResult<Mode>["numbers"][];
-  timestamp: SnapshotResult<Mode>["timestamp"];
-  quoteLength: SnapshotResult<Mode>["quoteLength"][];
-  tags: SnapshotResult<Mode>["tags"];
-  funbox: SnapshotResult<Mode>["funbox"];
-  language: SnapshotResult<Mode>["language"][];
+  punctuation: PracticeResult["punctuation"][];
+  numbers: PracticeResult["numbers"][];
+  timestamp: PracticeResult["timestamp"];
+  quoteLength: PracticeResult["quoteLength"][];
+  tags: PracticeResult["tags"];
+  funbox: PracticeResult["funbox"];
+  language: PracticeResult["language"][];
 };
 
 const queryKeys = {
@@ -90,7 +80,6 @@ export function useResultStatsLiveQuery(
   options?: { lastTen?: true } | { groupByDay?: true },
 ) {
   return useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
     const state = queryState();
     if (state === undefined) return undefined;
 
@@ -135,7 +124,7 @@ export function useResultStatsLiveQuery(
 export async function getResultsQueryOnce(options: {
   queryState: Accessor<ResultsQueryState | undefined>;
   sorting: Accessor<{
-    field: keyof SnapshotResult<Mode>;
+    field: keyof PracticeResult;
     direction: "asc" | "desc";
   }>;
 }) {
@@ -152,7 +141,7 @@ export async function getResultsQueryOnce(options: {
 }
 
 /**
- * get list of SnapshotResults for the current result selection
+ * get list of PracticeResults for the current result selection
  * @param queryState
  * @returns
  */
@@ -160,13 +149,12 @@ export async function getResultsQueryOnce(options: {
 export function useResultsLiveQuery(options: {
   queryState: Accessor<ResultsQueryState | undefined>;
   sorting: Accessor<{
-    field: keyof SnapshotResult<Mode>;
+    field: keyof PracticeResult;
     direction: "asc" | "desc";
   }>;
   limit: Accessor<number>;
 }) {
   return useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
     const state = options.queryState();
     const sorting = options.sorting();
     const limit = options.limit();
@@ -179,41 +167,15 @@ export function useResultsLiveQuery(options: {
   });
 }
 
-function normalizeResult(
-  result: ResultMinified | SnapshotResult<Mode>,
-  knownTagIds?: Set<string>,
-): SnapshotResult<Mode> {
+function normalizeResult(result: LocalResult): PracticeResult {
   const resultDate = new Date(result.timestamp);
-  resultDate.setSeconds(0);
-  resultDate.setMinutes(0);
-  resultDate.setHours(0);
-  resultDate.setMilliseconds(0);
-
-  //results strip default values, add them back
-  result.bailedOut ??= false;
-  result.blindMode ??= false;
-  result.lazyMode ??= false;
-  result.difficulty ??= "normal";
-  result.funbox ??= [];
-  result.language ??= "english";
-  result.numbers ??= false;
-  result.punctuation ??= false;
-  result.quoteLength ??= -1;
-  result.restartCount ??= 0;
-  result.incompleteTestSeconds ??= 0;
-  result.afkDuration ??= 0;
-
-  result.tags ??= [];
-  if (knownTagIds !== undefined) {
-    result.tags = result.tags.filter((tagId) => knownTagIds.has(tagId));
-  }
-  result.isPb ??= false;
+  resultDate.setHours(0, 0, 0, 0);
   return {
     ...result,
-    timeTyping: calcTimeTyping(result),
+    timeTyping: result.testDuration + result.incompleteTestSeconds,
     words: Math.round((result.wpm / 60) * result.testDuration),
     dayTimestamp: resultDate.getTime(),
-  } as SnapshotResult<Mode>;
+  };
 }
 
 const resultsCollection = createCollection(
@@ -221,29 +183,17 @@ const resultsCollection = createCollection(
     staleTime: Infinity,
     gcTime: Infinity, //remove when __nonReactive is removed
     queryKey: queryKeys.root(),
-    enabled: isAuthenticated,
+    enabled: true,
     queryFn: async () => {
-      const tagIds = await getTagsOnce();
-      const knownTagIds = new Set([...tagIds.map((it) => it._id)]);
-      //const options = parseLoadSubsetOptions(ctx.meta?.loadSubsetOptions);
+      const results = getLocalResults().map(toPracticeResult);
 
-      const response = await Ape.results.get({
-        //query: { limit: options.limit },
-      });
-
-      if (response.status !== 200) {
-        throw new Error(`Error fetching results:${response.body.message}`);
-      }
-
-      const results = response.body.data
-        .map((result) => normalizeResult(result, knownTagIds))
-        .map(applyIdWorkaround);
-
-      if (getLastResult() === undefined && results.length > 0) {
+      if (results.length > 0) {
         const lastResult = results.reduce((acc, cur) =>
           acc === undefined || acc.timestamp < cur.timestamp ? cur : acc,
         );
         setLastResult(lastResult);
+      } else {
+        setLastResult(undefined);
       }
       return results;
     },
@@ -255,170 +205,6 @@ const resultsCollection = createCollection(
 resultsCollection.createIndex((row) => row.timestamp, {
   indexType: BTreeIndex,
 });
-
-type ActionType = {
-  updateTags: {
-    resultId: string;
-    currentTagIds: string[];
-    newTagIds: string[];
-    //TODO: remove when result page  is migrated to solidjs
-    afterUpdate?: (params: { tagPbs: string[] }) => void;
-  };
-  insertLocalResult: {
-    result: SnapshotResult<Mode>;
-  };
-  deleteLocalTag: {
-    tagId: string;
-  };
-};
-
-const actions = {
-  updateTags: createOptimisticAction<ActionType["updateTags"]>({
-    onMutate: ({ resultId, newTagIds }) => {
-      resultsCollection.update(resultId, (result) => {
-        result.tags = newTagIds;
-      });
-    },
-    mutationFn: async ({ resultId, currentTagIds, newTagIds, afterUpdate }) => {
-      const response = await Ape.results.updateTags({
-        body: { resultId, tagIds: newTagIds },
-      });
-      if (response.status !== 200) {
-        throw new Error(
-          `Failed to update result tag: ${response.body.message}`,
-        );
-      }
-      const results = getResults();
-      const result = results.find((it) => it._id === resultId);
-
-      if (result === undefined) {
-        throw new Error(`Cannot find result with id ${resultId}`);
-      }
-
-      const tagsToUpdate = [
-        ...currentTagIds.filter((tag) => !newTagIds.includes(tag)),
-        ...newTagIds.filter((tag) => !currentTagIds.includes(tag)),
-      ];
-      tagsToUpdate.forEach((tag) => {
-        reconcileLocalTagPB(
-          tag,
-          result.mode,
-          result.mode2,
-          result.punctuation,
-          result.numbers,
-          result.language,
-          result.difficulty,
-          result.lazyMode,
-          results,
-        );
-      });
-
-      resultsCollection.utils.writeUpdate({
-        _id: resultId,
-        tags: newTagIds,
-      });
-
-      afterUpdate?.({ tagPbs: response.body.data.tagPbs });
-    },
-  }),
-  insertLocalResult: createOptimisticAction<ActionType["insertLocalResult"]>({
-    onMutate: ({ result }) => {
-      resultsCollection.utils.writeInsert(normalizeResult(result));
-    },
-    mutationFn: async () => {
-      //we don't sync the changes back to the backend here, it is done already
-      return;
-    },
-  }),
-  deleteLocalTag: createOptimisticAction<ActionType["deleteLocalTag"]>({
-    onMutate: ({ tagId }) => {
-      for (const result of [...resultsCollection.values()].filter((it) =>
-        it.tags.includes(tagId),
-      )) {
-        resultsCollection.utils.writeUpdate({
-          ...result,
-          tags: result.tags.filter((it) => it !== tagId),
-        });
-      }
-    },
-    mutationFn: async () => {
-      //we do not sync the changes back to the backend
-      return;
-    },
-  }),
-};
-// --- Public API ---
-export async function updateTags(
-  params: ActionType["updateTags"],
-): Promise<void> {
-  if (!resultsCollection.isReady()) {
-    // if its not ready yet, send the api request to update the tags
-    const response = await Ape.results.updateTags({
-      body: { resultId: params.resultId, tagIds: params.newTagIds },
-    });
-
-    if (response.status !== 200) {
-      throw new Error(`Failed to update result tag: ${response.body.message}`);
-    }
-
-    const result = getLastResult();
-
-    if (result === undefined) {
-      throw new Error(`Cannot find result with id ${params.resultId}`);
-    }
-
-    if (result._id !== params.resultId) {
-      throw new Error(
-        `Last result id ${result._id} does not match updated result id ${params.resultId}. Call the devs and tell them to fix their ugly code`,
-      );
-    }
-
-    response.body.data.tagPbs.forEach((tag) => {
-      saveLocalTagPB(
-        tag,
-        result.mode,
-        result.mode2,
-        result.punctuation,
-        result.numbers,
-        result.language,
-        result.difficulty,
-        result.lazyMode,
-        result.wpm,
-        result.acc,
-        result.rawWpm,
-        result.consistency,
-      );
-    });
-
-    params.afterUpdate?.({ tagPbs: response.body.data.tagPbs });
-    return;
-  }
-
-  const transaction = actions.updateTags(params);
-  await transaction.isPersisted.promise;
-}
-
-export async function insertLocalResult(
-  params: ActionType["insertLocalResult"],
-): Promise<void> {
-  if (!resultsCollection.isReady()) {
-    //not loaded yet, don't need to insert
-    return;
-  }
-  const transaction = actions.insertLocalResult(params);
-  await transaction.isPersisted.promise;
-}
-
-export async function deleteLocalTag(
-  params: ActionType["deleteLocalTag"],
-): Promise<void> {
-  if (!resultsCollection.isReady()) {
-    //not loaded yet, don't need to update
-    return;
-  }
-  const transaction = actions.deleteLocalTag(params);
-  await transaction.isPersisted.promise;
-}
 
 // oxlint-disable-next-line typescript/explicit-function-return-type
 export function buildResultsQuery(state: ResultsQueryState) {
@@ -538,41 +324,14 @@ function timestampFilter(val: ResultFilters["date"]): number {
   return Math.floor(Date.now() - seconds * 1000);
 }
 
-function calcTimeTyping(result: ResultMinified): number {
-  let tt = 0;
-  if (
-    result.testDuration === undefined &&
-    result.mode2 !== "custom" &&
-    result.mode2 !== "zen"
-  ) {
-    //test finished before testDuration field was introduced - estimate
-    if (result.mode === "time") {
-      tt = parseInt(result.mode2);
-    } else if (result.mode === "words") {
-      tt = (parseInt(result.mode2) / result.wpm) * 60;
-    }
-  } else {
-    tt = parseFloat(result.testDuration as unknown as string); //legacy results could have a string here
-  }
-  if (result.incompleteTestSeconds !== undefined) {
-    tt += result.incompleteTestSeconds;
-  } else if (result.restartCount !== undefined && result.restartCount > 0) {
-    tt += (tt / 4) * result.restartCount;
-  }
-  return tt;
-}
-
 // oxlint-disable-next-line typescript/explicit-function-return-type
 export const getSingleResultQueryOptions = (_id: string) =>
   queryOptions({
     queryKey: queryKeys.fullResult(_id),
     queryFn: async () => {
-      const response = await Ape.results.getById({ params: { resultId: _id } });
-
-      if (response.status !== 200) {
-        throw new Error(`Failed to load result: ${response.body.message}`);
-      }
-      return response.body.data;
+      const result = getLocalResults().find((item) => item._id === _id);
+      if (result === undefined) throw new Error("Local result not found");
+      return toPracticeResult(result);
     },
     staleTime: Infinity,
   });
@@ -604,19 +363,14 @@ export function useUserAverage10LiveQuery(options: {
     };
   });
 
-  const activeTagsQuery = useActiveTagsLiveQuery();
-
   return useLiveQuery((q) => {
     //disable query
-    if (!isAuthenticated()) return undefined;
     if (!options.isEnabled()) return undefined;
 
     return q
       .from({
         //we use sub-query to filter first and then aggregate
-        last10: buildSettingsResultsQuery(settingsFilter(), {
-          tagIds: activeTagsQuery().map((it) => it._id),
-        })
+        last10: buildSettingsResultsQuery(settingsFilter())
           .orderBy(({ r }) => r.timestamp, "desc")
           .limit(10),
       })
@@ -629,14 +383,12 @@ export async function getUserAverage10Once(
   options: CurrentSettingsFilter,
 ): Promise<{ wpm: number; acc: number }> {
   //exit early if there is no user. Don't init the result collection
-  if (!isAuthenticated()) return { wpm: 0, acc: 0 };
-  const tagIds = (await getActiveTagsOnce()).map((it) => it._id);
 
   const result = await queryOnce((q) =>
     q
       .from({
         //we use sub-query to filter first and then aggregate
-        last10: buildSettingsResultsQuery(options, { tagIds })
+        last10: buildSettingsResultsQuery(options)
           .orderBy(({ r }) => r.timestamp, "desc")
           .limit(10),
       })
@@ -651,11 +403,9 @@ export async function getUserDailyBestOnce(
   options: CurrentSettingsFilter,
 ): Promise<{ wpm: number; acc: number }> {
   //exit early if there is no user. Don't init the result collection
-  if (!isAuthenticated()) return { wpm: 0, acc: 0 };
-  const tagIds = (await getActiveTagsOnce()).map((it) => it._id);
 
   const result = await queryOnce(() =>
-    buildSettingsResultsQuery(options, { tagIds })
+    buildSettingsResultsQuery(options)
       .where(({ r }) => gte(r.timestamp, Date.now() - 24 * 60 * 60 * 1000))
       .orderBy(({ r }) => r.wpm, "desc")
       .limit(1)
@@ -706,13 +456,11 @@ export async function waitForResultsReady(): Promise<void> {
 /**
  *
  */
-createEffectOn(isAuthenticated, (hasUser) => {
-  if (hasUser) {
-    void resultsCollection.utils.refetch();
-  }
+createEffectOn(getLocalResults, () => {
+  void resultsCollection.utils.refetch();
 });
 
-function getResults(): SnapshotResult<Mode>[] {
+function getResults(): PracticeResult[] {
   return [...resultsCollection.values()];
 }
 /**
@@ -721,3 +469,7 @@ function getResults(): SnapshotResult<Mode>[] {
 export const __nonReactive = {
   getResults,
 };
+
+export function toPracticeResult(result: LocalResult): PracticeResult {
+  return normalizeResult(result);
+}

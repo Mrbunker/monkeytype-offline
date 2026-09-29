@@ -177,7 +177,6 @@ export const PaceCaretSchema = z.enum([
   "off",
   "average",
   "pb",
-  "tagPb",
   "last",
   "custom",
   "daily",
@@ -324,8 +323,6 @@ export const FunboxNameSchema = z.enum([
   "read_ahead_hard",
   "memory",
   "nospace",
-  "poetry",
-  "wikipedia",
   "weakspot",
   "pseudolang",
   "IPv4",
@@ -515,7 +512,6 @@ export const ConfigSchema = z
     monkeyPowerLevel: MonkeyPowerLevelSchema,
 
     // ads
-    ads: AdsSchema,
   } satisfies Record<string, ZodSchema>)
   .strict();
 

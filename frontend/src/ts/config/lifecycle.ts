@@ -15,7 +15,6 @@ import { configEvent } from "../events/config";
 import { migrateConfig } from "./utils";
 import { promiseWithResolvers } from "../utils/misc";
 import { setConfig } from "./setters";
-import { deleteConfig } from "../ape/config";
 import { typedKeys } from "@monkeytype/util/objects";
 
 export async function applyConfigFromJson(json: string): Promise<void> {
@@ -113,7 +112,6 @@ export async function applyConfig(
 
 export async function resetConfig(): Promise<void> {
   await applyConfig(getDefaultConfig());
-  await deleteConfig();
   saveFullConfigToLocalStorage(true);
 }
 

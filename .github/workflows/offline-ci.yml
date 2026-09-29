@@ -1,0 +1,31 @@
+name: Offline frontend
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm lint
+      - run: pnpm lint:packages
+      - run: pnpm test
+      - run: pnpm test:packages
+      - run: pnpm check-assets
+      - run: pnpm --filter @monkeytype/frontend exec playwright install --with-deps chromium
+      - run: pnpm --filter @monkeytype/frontend test:browser
+      - run: BASE_PATH=/monkeytype-offline/ pnpm --filter @monkeytype/frontend exec vite build --outDir ../dist-subpath/monkeytype-offline
+      - run: E2E_SUBPATH=true pnpm --filter @monkeytype/frontend test:browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monkeytype-local-static
+          path: frontend/dist

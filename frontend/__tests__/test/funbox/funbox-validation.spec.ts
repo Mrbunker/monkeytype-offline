@@ -17,7 +17,6 @@ describe("funbox-validation", () => {
       //checks for zen mode
       ...[
         "58008", //getWord
-        "wikipedia", //pullSection
         "morse", //alterText
         "polyglot", //withWords
         "rAnDoMcAsE", //changesCapitalisation
@@ -45,7 +44,6 @@ describe("funbox-validation", () => {
       ...["quote", "custom"].flatMap((value) =>
         [
           "58008", //getWord
-          "wikipedia", //pullSection
           "polyglot", //withWords
           "zipf", //changesWordsFrequency
         ].map((funbox) => ({

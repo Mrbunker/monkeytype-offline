@@ -259,7 +259,7 @@ function applyCustomBackgroundSize(): void {
 }
 
 export async function applyCustomBackground(): Promise<void> {
-  let backgroundUrl = Config.customBackground;
+  let backgroundUrl = "";
 
   //if there is a localBackgroundFile available, use it.
   const localBackgroundFile = await fileStorage.getFile("LocalBackgroundFile");

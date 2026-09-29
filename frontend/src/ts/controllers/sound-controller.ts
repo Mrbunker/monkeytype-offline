@@ -1,3 +1,4 @@
+import { assetUrl } from "../utils/asset-url";
 import { Config } from "../config/store";
 import { configEvent } from "../events/config";
 import { randomElementFromArray } from "../utils/arrays";
@@ -33,7 +34,7 @@ const howlers: Record<string, Promise<Howl>> = {};
 async function getHowl(src: string): Promise<Howl> {
   howlers[src] ??= (async () => {
     const { Howl } = await getHowlerModule();
-    return new Howl({ src });
+    return new Howl({ src: assetUrl(src) });
   })();
 
   return howlers[src];

@@ -1,4 +1,4 @@
-import { ComponentProps, For, JSXElement, Show } from "solid-js";
+import { ComponentProps, For, JSXElement } from "solid-js";
 
 import { configMetadata } from "../../../config/metadata";
 import { setConfig, setQuoteLengthAll } from "../../../config/setters";
@@ -6,7 +6,6 @@ import { getConfig } from "../../../config/store";
 import { restartTestEvent } from "../../../events/test";
 import { createEffectOn } from "../../../hooks/effects";
 import { useRefWithUtils } from "../../../hooks/useRefWithUtils";
-import { isAuthenticated } from "../../../states/core";
 import { showModal } from "../../../states/modals";
 import { getResultVisible, getFocus } from "../../../states/test";
 import { FaObject } from "../../../types/font-awesome";
@@ -332,18 +331,18 @@ function Mode2Quote(props: ComponentProps<"div">): JSXElement {
           />
         )}
       </For>
-      <Show when={isAuthenticated()}>
-        <TCButton
-          fa={{
-            icon: "fa-heart",
-          }}
-          active={areUnsortedArraysEqual(getConfig.quoteLength, [-3])}
-          onClick={() => {
-            setConfig("quoteLength", [-3]);
-            restartTestEvent.dispatch();
-          }}
-        />
-      </Show>
+
+      <TCButton
+        fa={{
+          icon: "fa-heart",
+        }}
+        active={areUnsortedArraysEqual(getConfig.quoteLength, [-3])}
+        onClick={() => {
+          setConfig("quoteLength", [-3]);
+          restartTestEvent.dispatch();
+        }}
+      />
+
       <TCButton
         fa={{
           icon: "fa-search",

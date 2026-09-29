@@ -11,9 +11,9 @@
   "scripts": {
     "dev": "tsup-node --watch",
     "build": "tsup-node",
-    "ts-check": "tsc --noEmit",
-    "lint": "oxlint . --type-aware --type-check",
-    "lint-fast": "oxlint ."
+    "ts-check": "oxlint . --type-aware --type-check --format agent",
+    "lint": "oxlint . --type-aware --type-check --format agent",
+    "lint-fast": "oxlint . --format agent"
   },
   "devDependencies": {
     "@monkeytype/typescript-config": "workspace:*",

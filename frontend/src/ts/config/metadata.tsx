@@ -5,11 +5,8 @@ import { JSXElement } from "solid-js";
 
 import * as CustomThemes from "../collections/custom-themes";
 import { getDefaultConfig } from "../constants/default-config";
-import { isAuthenticated } from "../states/core";
 import { showNoticeNotification } from "../states/notifications";
 import { FaObject } from "../types/font-awesome";
-import { isDevEnvironment } from "../utils/env";
-import { reloadAfter } from "../utils/misc";
 import { capitalizeFirstLetter } from "../utils/strings";
 import { getOptions } from "../utils/zod";
 import { canSetFunboxWithConfig } from "./funbox-validation";
@@ -720,28 +717,14 @@ export const configMetadata: ConfigMetadataObject = {
     changeRequiresRestart: false,
     group: "caret",
     description:
-      "Displays a second caret that moves at constant speed. The 'average' option averages the speed of last 10 results. The 'tag pb' option takes the highest PB of any active tag. The 'daily' option takes the highest speed of the last 24 hours.",
+      "Displays a second caret that moves at constant speed. The 'average' option averages the speed of last 10 results. The 'daily' option takes the highest speed of the last 24 hours.",
     optionsMetadata: {
-      tagPb: {
-        displayString: "tag pb",
-      },
       average: {},
       custom: {},
       daily: {},
       last: {},
       off: {},
       pb: {},
-    },
-    isBlocked: ({ value }) => {
-      if (document.readyState === "complete") {
-        if ((value === "pb" || value === "tagPb") && !isAuthenticated()) {
-          showNoticeNotification(
-            `Pace caret "pb" and "tag pb" are unavailable without an account`,
-          );
-          return true;
-        }
-      }
-      return false;
     },
   },
   paceCaretCustomSpeed: {
@@ -1062,15 +1045,12 @@ export const configMetadata: ConfigMetadataObject = {
   },
   customBackground: {
     key: "customBackground",
-    fa: { icon: "fa-link" },
     displayString: "custom background",
-    changeRequiresRestart: false,
+    fa: { icon: "fa-image" },
     group: "theme",
-    overrideValue: ({ value }) => {
-      return value.trim();
-    },
-    description:
-      "Set an image url or local image to be a custom background image. Local image always take priority over the image url. Cover fits the image to cover the screen. Contain fits the image to be fully visible. Max fits the image corner to corner.",
+    description: "Use an image from this device as your background.",
+    changeRequiresRestart: false,
+    overrideValue: () => "",
   },
   customBackgroundSize: {
     key: "customBackgroundSize",
@@ -1133,12 +1113,6 @@ export const configMetadata: ConfigMetadataObject = {
     },
     isBlocked: ({ value }) => {
       if (value === "custom") {
-        if (!isAuthenticated()) {
-          showNoticeNotification(
-            "Random theme 'custom' is unavailable without an account",
-          );
-          return true;
-        }
         if (CustomThemes.__nonReactive.getCustomThemes().length === 0) {
           showNoticeNotification(
             "Random theme 'custom' requires at least one custom theme to be saved",
@@ -1293,37 +1267,8 @@ export const configMetadata: ConfigMetadataObject = {
     changeRequiresRestart: false,
     group: "hidden",
   },
-
-  // ads
-  ads: {
-    key: "ads",
-    fa: { icon: "fa-ad" },
-    changeRequiresRestart: false,
-    description: `You can disable or enable ads at any time. "Result" will show one ad on the result page, "on" will add floating vertical banners, and "sellout" will add multiple ads on every page.`,
-    group: "ads",
-    overrideValue: ({ value }) => {
-      if (isDevEnvironment()) {
-        return "off";
-      }
-      return value;
-    },
-    isBlocked: ({ value }) => {
-      if (value !== "off" && isDevEnvironment()) {
-        showNoticeNotification("Ads are disabled in development mode.");
-        return true;
-      }
-      return false;
-    },
-    afterSet: ({ nosave }) => {
-      if (!nosave && !isDevEnvironment()) {
-        reloadAfter(3);
-        showNoticeNotification("Ad settings changed. Refreshing...");
-      }
-    },
-  },
 };
 
-// typed accessor for a single option's metadata, avoiding per-callsite casts
 export function getOptionMetadata<K extends keyof ConfigSchemas.Config>(
   key: K,
   option: ConfigSchemas.Config[K],

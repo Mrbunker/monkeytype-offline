@@ -46,7 +46,7 @@ export function ShareTestSettings(): JSXElement {
   const formValues = form.useStore((s) => s.values);
 
   const url = () => {
-    const baseUrl = `${location.origin}?testSettings=`;
+    const baseUrl = `${location.origin}${import.meta.env.BASE_URL}?testSettings=`;
     const settings: SharedTestSettings = new Array(8).fill(
       null,
     ) as SharedTestSettings;

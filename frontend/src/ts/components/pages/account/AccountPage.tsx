@@ -1,4 +1,3 @@
-import { Mode } from "@monkeytype/schemas/shared";
 import { createMemo, createSignal, JSXElement, Show } from "solid-js";
 
 import {
@@ -6,28 +5,26 @@ import {
   getResultsQueryOnce,
   useResultsLiveQuery,
 } from "../../../collections/results";
-import { SnapshotResult } from "../../../constants/default-snapshot";
-import { getActivePage, isAuthenticated } from "../../../states/core";
+import { PracticeResult } from "../../../offline/types";
+import { getActivePage } from "../../../states/core";
 import { hideLoaderBar, showLoaderBar } from "../../../states/loader-bar";
 import { filters, setFilters } from "../../../states/result-filters";
 import { qs } from "../../../utils/dom";
 import { downloadResultsCSV } from "../../../utils/misc";
-import { Advertisement } from "../../common/Advertisement";
 import AsyncContent from "../../common/AsyncContent";
 import { Button } from "../../common/Button";
 import { Page } from "../../common/Page";
 import { Charts } from "./Charts";
 import { Filters } from "./Filters";
-import { MyProfile } from "./MyProfile";
+import { LocalDataControls } from "./LocalDataControls";
 import { Table } from "./Table";
 import { TestStats } from "./TestStats";
-import { VerifyNotice } from "./VerifyNotice";
 
 export function AccountPage(): JSXElement {
   const [limit, setLimit] = createSignal(10);
 
   const [sorting, setSorting] = createSignal<{
-    field: keyof SnapshotResult<Mode>;
+    field: keyof PracticeResult;
     direction: "asc" | "desc";
   }>({
     field: "timestamp",
@@ -35,7 +32,7 @@ export function AccountPage(): JSXElement {
   });
 
   const queryState = createMemo(() => {
-    if (getActivePage() !== "account" || !isAuthenticated()) return undefined;
+    if (getActivePage() !== "account") return undefined;
 
     return createResultsQueryState(filters);
   });
@@ -52,12 +49,9 @@ export function AccountPage(): JSXElement {
   });
 
   return (
-    <Page id="account" needsAuthentication>
+    <Page id="account">
       <div class="flex flex-col gap-8">
-        <VerifyNotice />
-        <MyProfile />
-
-        <Advertisement id="ad-account-1" visible="sellout" />
+        <LocalDataControls />
 
         <Filters filters={filters} onChangeFilters={setFilters} />
 
@@ -65,7 +59,10 @@ export function AccountPage(): JSXElement {
           when={resultsQuery()?.length > 0}
           fallback={
             <div class="grid h-150 place-items-center">
-              <div>No data found. Check your filters.</div>
+              <div>
+                No saved results match these filters. Complete a valid test to
+                start your local history.
+              </div>
             </div>
           }
         >
@@ -74,7 +71,7 @@ export function AccountPage(): JSXElement {
               filters={filters}
               queryState={queryState}
               onHistoryChartClick={({ index, _id }) => {
-                const newLimit = Math.ceil(index / 10) * 10;
+                const newLimit = Math.ceil((index + 1) / 10) * 10;
                 if (limit() < newLimit) {
                   setLimit(newLimit);
                 }
@@ -113,8 +110,6 @@ export function AccountPage(): JSXElement {
                 }}
               />
             </div>
-
-            <Advertisement id="ad-account-2" visible="sellout" />
 
             <AsyncContent collections={{ resultsQuery }}>
               {({ resultsQueryData }) => (

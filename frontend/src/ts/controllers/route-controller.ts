@@ -1,11 +1,8 @@
 import * as PageController from "./page-controller";
 import * as PageTransition from "../legacy-states/page-transition";
-import { isAuthAvailable } from "../firebase";
-import { isAuthenticated } from "../states/core";
 import { isFunboxActive } from "../test/funbox/list";
 import { showNoticeNotification } from "../states/notifications";
 import { navigationEvent, type NavigateOptions } from "../events/navigation";
-import { authEvent } from "../events/auth";
 import {
   isTestRestarting,
   isResultCalculating,
@@ -47,115 +44,34 @@ const route404: Route = {
   },
 };
 
-// NOTE: whenever adding a route add the pathname to the `firebase.json` rewrite rule
 const routes: Route[] = [
   {
     path: "/",
-    load: async (_params, options) => {
+    load: async (_, options) => {
       await PageController.change("test", options);
-    },
-  },
-  {
-    path: "/verify",
-    load: async (_params, options) => {
-      await PageController.change("test", options);
-    },
-  },
-  {
-    path: "/leaderboards",
-    load: async (_params, options) => {
-      await PageController.change("leaderboards", options);
-    },
-  },
-  {
-    path: "/about",
-    load: async (_params, options) => {
-      await PageController.change("about", options);
     },
   },
   {
     path: "/settings",
-    load: async (_params, options) => {
+    load: async (_, options) => {
       await PageController.change("settings", options);
     },
   },
   {
-    path: "/login",
-    load: async (_params, options) => {
-      if (!isAuthAvailable()) {
-        await navigate("/", options);
-        return;
-      }
-      if (isAuthenticated()) {
-        await navigate("/account", options);
-        return;
-      }
-      await PageController.change("login", options);
-    },
-  },
-  {
     path: "/account",
-    load: async (_params, options) => {
-      if (!isAuthAvailable()) {
-        await navigate("/", options);
-        return;
-      }
-      if (!isAuthenticated()) {
-        await navigate("/login", options);
-        return;
-      }
+    load: async (_, options) => {
       await PageController.change("account", options);
     },
   },
   {
-    path: "/account-settings",
-    load: async (_params, options) => {
-      if (!isAuthAvailable()) {
-        await navigate("/", options);
-        return;
-      }
-      if (!isAuthenticated()) {
-        await navigate("/login", options);
-        return;
-      }
-      await PageController.change("accountSettings", options);
-    },
-  },
-  {
-    path: "/profile",
-    load: async (_params, options) => {
-      await PageController.change("profileSearch", options);
-    },
-  },
-  {
-    path: "/profile/:uidOrName",
-    load: async (params, options) => {
-      await PageController.change("profile", {
-        ...options,
-        force: true,
-        params: {
-          uidOrName: params["uidOrName"] as string,
-        },
-        data: options.data,
-      });
-    },
-  },
-  {
-    path: "/friends",
-    load: async (_params, options) => {
-      if (!isAuthAvailable()) {
-        await navigate("/", options);
-        return;
-      }
-      if (!isAuthenticated()) {
-        await navigate("/login", options);
-        return;
-      }
-
-      await PageController.change("friends", options);
+    path: "/about",
+    load: async (_, options) => {
+      await PageController.change("about", options);
     },
   },
 ];
+
+let pendingNavigation: ReturnType<typeof setTimeout> | undefined;
 
 export async function navigate(
   url = window.location.pathname +
@@ -167,12 +83,16 @@ export async function navigate(
     !options.force &&
     (isTestRestarting() || isResultCalculating() || PageTransition.get())
   ) {
-    console.debug(
-      `navigate: ${url} ignored, page is busy (testRestarting: ${isTestRestarting()}, resultCalculating: ${isResultCalculating()}, pageTransition: ${PageTransition.get()})`,
-    );
+    // Finish the current transition, then honor the most recent navigation.
+    clearTimeout(pendingNavigation);
+    pendingNavigation = setTimeout(() => {
+      void navigate(url, options);
+    }, 100);
     return;
   }
 
+  clearTimeout(pendingNavigation);
+  pendingNavigation = undefined;
   const noQuit = isFunboxActive("no_quit");
   if (isTestActive() && noQuit) {
     showNoticeNotification(
@@ -186,18 +106,19 @@ export async function navigate(
     return;
   }
 
-  url = url.replace(/\/$/, "");
-  if (url === "") url = "/";
-
-  // only push to history if we're navigating to a different URL
-  const currentUrl = new URL(window.location.href);
-  const targetUrl = new URL(url, window.location.origin);
-
+  const target = new URL(url, window.location.origin);
+  const base = import.meta.env.BASE_URL;
+  const route = target.hash.startsWith("#/")
+    ? target.hash.slice(1)
+    : target.pathname.startsWith(base)
+      ? `/${target.pathname.slice(base.length)}`
+      : target.pathname;
+  const destination = `${base}${target.search}#${route.replace(/\/$/, "") || "/"}`;
   if (
-    currentUrl.pathname + currentUrl.search + currentUrl.hash !==
-    targetUrl.pathname + targetUrl.search + targetUrl.hash
+    window.location.pathname + window.location.search + window.location.hash !==
+    destination
   ) {
-    history.pushState(null, "", url);
+    history.pushState(null, "", destination);
   }
 
   await router(options);
@@ -207,7 +128,7 @@ async function router(options = {} as NavigateOptions): Promise<void> {
   const matches = routes.map((r) => {
     return {
       route: r,
-      result: location.pathname.match(pathToRegex(r.path)),
+      result: (location.hash.slice(1) || "/").match(pathToRegex(r.path)),
     };
   });
 
@@ -233,49 +154,38 @@ window.addEventListener("popstate", () => {
   void router();
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.body.addEventListener("click", (e) => {
-    const target = e?.target as HTMLLinkElement;
-    if (target.matches("[router-link]") && target?.href) {
-      e.preventDefault();
-      void navigate(target.href);
+window.addEventListener("hashchange", () => {
+  void router();
+});
+
+document.addEventListener("click", (event) => {
+  const anchor =
+    event.target instanceof Element
+      ? event.target.closest<HTMLAnchorElement>("a")
+      : null;
+  if (
+    !anchor ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+  const href = anchor.getAttribute("href");
+  if (href?.startsWith("#") && !href.startsWith("#/")) {
+    const section = document.getElementById(href.slice(1));
+    if (section) {
+      event.preventDefault();
+      section.scrollIntoView({ block: "start" });
     }
-  });
+    return;
+  }
+  if (!anchor.hasAttribute("router-link")) return;
+  event.preventDefault();
+  void navigate(anchor.href);
 });
 
 navigationEvent.subscribe(({ url, options }) => {
   void navigate(url, options);
-});
-
-authEvent.subscribe((event) => {
-  if (event.type === "authStateChanged") {
-    let keyframes = [
-      {
-        percentage: 90,
-        durationMs: 1000,
-        text: "Downloading user data...",
-      },
-    ];
-
-    //undefined means navigate to whatever the current window.location.pathname is
-    void navigate(undefined, {
-      force: true,
-      loadingOptions: {
-        loadingMode: () => {
-          if (event.data.isUserSignedIn) {
-            return "sync";
-          } else {
-            return "none";
-          }
-        },
-        loadingPromise: async () => {
-          await event.data.loadPromise;
-        },
-        style: "bar",
-        keyframes: keyframes,
-      },
-    }).finally(() => {
-      document.body.classList.remove("loading");
-    });
-  }
 });

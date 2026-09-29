@@ -107,7 +107,7 @@ describe("ConfigMeta", () => {
       customBackground: [
         {
           value: " https://example.com/test.jpg ",
-          expected: { customBackground: "https://example.com/test.jpg" },
+          expected: { customBackground: "" },
         },
       ],
       accountChart: [

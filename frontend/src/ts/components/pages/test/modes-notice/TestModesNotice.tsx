@@ -1,6 +1,5 @@
 import { createMemo } from "solid-js";
 
-import { useActiveTagsLiveQuery } from "../../../../collections/tags";
 import * as Commandline from "../../../../commandline/commandline";
 import { getConfig } from "../../../../config/store";
 import {
@@ -61,7 +60,6 @@ export function TestModesNotice() {
       <DeleteOnError />
       <Layout />
       <OppositeShift />
-      <Tags />
     </div>
   );
 }
@@ -377,21 +375,6 @@ function OppositeShift() {
       icon="fa-exchange-alt"
       openCommandline="oppositeShiftMode"
       text={`opposite shift${getConfig.oppositeShiftMode === "keymap" ? " (keymap)" : ""}`}
-    />
-  );
-}
-
-function Tags() {
-  const tags = useActiveTagsLiveQuery();
-
-  return (
-    <Notice
-      when={tags().length > 0}
-      icon={tags().length === 1 ? "fa-tag" : "fa-tags"}
-      openCommandline="tags"
-      text={tags()
-        .map((tag) => tag.name)
-        .join(", ")}
     />
   );
 }

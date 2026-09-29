@@ -18,9 +18,7 @@ import { getCurrentInput, getInputForWord } from "../events/data";
 import * as LayoutfluidFunboxTimer from "./layoutfluid-funbox-timer";
 import { highlight } from "../../events/keymap";
 import * as MemoryTimer from "./memory-funbox-timer";
-import { getPoem } from "../poetry";
 import * as JSONData from "../../utils/json-data";
-import { getSection } from "../wikipedia";
 import * as WeakSpot from "../weak-spot";
 import * as IPAddresses from "../../utils/ip-addresses";
 import { getActiveWordIndex } from "../../states/test";
@@ -505,16 +503,6 @@ const list: Partial<Record<FunboxName, FunboxFunctions>> = {
   nospace: {
     rememberSettings(): void {
       save("highlightMode", Config.highlightMode);
-    },
-  },
-  poetry: {
-    async pullSection(): Promise<JSONData.Section | false> {
-      return getPoem();
-    },
-  },
-  wikipedia: {
-    async pullSection(lang?: Language): Promise<JSONData.Section | false> {
-      return getSection((lang ?? "") || "english");
     },
   },
   weakspot: {

@@ -6,9 +6,8 @@ import {
   buildResultsQuery,
   ResultsQueryState,
 } from "../../../collections/results";
-import { type TagItem, useTagsLiveQuery } from "../../../collections/tags";
 import { getConfig } from "../../../config/store";
-import { getFormatting, isAuthenticated } from "../../../states/core";
+import { getFormatting } from "../../../states/core";
 import { FaSolidIcon } from "../../../types/font-awesome";
 import {
   capitalizeFirstLetter,
@@ -31,10 +30,8 @@ export function Charts(props: {
     getTypingSpeedUnit(getConfig.typingSpeedUnit),
   );
   const format = getFormatting;
-  const tags = useTagsLiveQuery();
 
   const resultsQuery = useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
     const state = props.queryState();
     if (state === undefined) return undefined;
     return q
@@ -47,7 +44,7 @@ export function Charts(props: {
       {({ resultsQueryData }) => (
         <div class="flex flex-col gap-8">
           <div>
-            <FilterSummary filters={props.filters} tags={tags()} />
+            <FilterSummary filters={props.filters} />
             <HistoryChart
               results={resultsQueryData()}
               beginAtZero={beginAtZero()}
@@ -74,10 +71,7 @@ export function Charts(props: {
   );
 }
 
-function FilterSummary(props: {
-  filters: ResultFilters;
-  tags: TagItem[];
-}): JSXElement {
+function FilterSummary(props: { filters: ResultFilters }): JSXElement {
   const Item = <
     T extends ResultFiltersKeys,
     K extends keyof ResultFilters[T],
@@ -124,11 +118,6 @@ function FilterSummary(props: {
         group="funbox"
         icon="fa-gamepad"
         format={replaceUnderscoresWithSpaces}
-      />
-      <Item
-        group="tags"
-        icon="fa-tags"
-        format={(tag) => props.tags.find((it) => it._id === tag)?.name ?? tag}
       />
     </div>
   );

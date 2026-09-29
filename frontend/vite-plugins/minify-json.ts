@@ -1,4 +1,4 @@
-import { Plugin } from "vite";
+import { Plugin, ResolvedConfig } from "vite";
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -7,10 +7,14 @@ import path from "node:path";
  * @returns
  */
 export function minifyJson(): Plugin {
+  let outputDirectory = "./dist";
   return {
     name: "minify-json",
     apply: "build",
-    generateBundle() {
+    configResolved(config: ResolvedConfig) {
+      outputDirectory = path.resolve(config.root, config.build.outDir);
+    },
+    closeBundle() {
       let totalOriginalSize = 0;
       let totalMinifiedSize = 0;
 
@@ -49,7 +53,7 @@ export function minifyJson(): Plugin {
       // console.log("\n\x1b[1mMinifying JSON files...\x1b[0m\n");
       const start = performance.now();
 
-      minifyJsonFiles("./dist");
+      minifyJsonFiles(outputDirectory);
 
       const end = performance.now();
       const totalSavings =

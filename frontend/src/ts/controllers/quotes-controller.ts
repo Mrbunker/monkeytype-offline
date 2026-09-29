@@ -1,9 +1,8 @@
+import { favoriteQuotes } from "../offline/favorite-quotes";
 import { removeLanguageSize } from "../utils/strings";
 import { randomElementFromArray, shuffle } from "../utils/arrays";
 import { cachedFetchJson } from "../utils/json-data";
 import { configEvent } from "../events/config";
-import * as DB from "../db";
-import Ape from "../ape";
 import { tryCatch } from "@monkeytype/util/trycatch";
 import { Language } from "@monkeytype/schemas/languages";
 import { QuoteData } from "@monkeytype/schemas/quotes";
@@ -146,102 +145,26 @@ class QuotesController {
   }
 
   getRandomFavoriteQuote(language: Language): Quote | null {
-    const snapshot = DB.getSnapshot();
-    if (!snapshot) {
-      return null;
-    }
-
-    const normalizedLanguage = removeLanguageSize(language);
-    const quoteIds: string[] = [];
-    const { favoriteQuotes } = snapshot;
-
-    if (favoriteQuotes === undefined) {
-      return null;
-    }
-
-    (Object.keys(favoriteQuotes) as Language[]).forEach((language) => {
-      if (removeLanguageSize(language) !== normalizedLanguage) {
-        return;
-      }
-
-      quoteIds.push(...(favoriteQuotes[language] ?? []));
-    });
-
-    if (quoteIds.length === 0) {
-      return null;
-    }
-
-    const randomQuoteId = randomElementFromArray(quoteIds);
-    const randomQuote = this.getQuoteById(parseInt(randomQuoteId, 10));
-
-    return randomQuote ?? null;
+    const ids = favoriteQuotes.get()[removeLanguageSize(language)] ?? [];
+    if (ids.length === 0) return null;
+    return this.getQuoteById(Number(randomElementFromArray(ids))) ?? null;
   }
 
-  isQuoteFavorite({ language: quoteLanguage, id }: Quote): boolean {
-    const snapshot = DB.getSnapshot();
-    if (!snapshot) {
-      return false;
-    }
-
-    const { favoriteQuotes } = snapshot;
-
-    if (favoriteQuotes === undefined) {
-      return false;
-    }
-
-    const normalizedQuoteLanguage = removeLanguageSize(quoteLanguage);
-
-    const matchedLanguage = (Object.keys(favoriteQuotes) as Language[]).find(
-      (language) => {
-        if (normalizedQuoteLanguage !== removeLanguageSize(language)) {
-          return false;
-        }
-        return (favoriteQuotes[language] ?? []).includes(id.toString());
-      },
-    );
-
-    return matchedLanguage !== undefined;
+  isQuoteFavorite(quote: Quote): boolean {
+    return (
+      favoriteQuotes.get()[removeLanguageSize(quote.language)] ?? []
+    ).includes(String(quote.id));
   }
 
   async setQuoteFavorite(quote: Quote, isFavorite: boolean): Promise<void> {
-    const snapshot = DB.getSnapshot();
-    if (!snapshot) {
-      throw new Error("Snapshot is not available");
-    }
-
-    if (!isFavorite) {
-      // Remove from favorites
-      const response = await Ape.users.removeQuoteFromFavorites({
-        body: {
-          language: quote.language,
-          quoteId: `${quote.id}`,
-        },
-      });
-
-      if (response.status === 200) {
-        const quoteIndex = snapshot.favoriteQuotes?.[quote.language]?.indexOf(
-          `${quote.id}`,
-        ) as number;
-        snapshot.favoriteQuotes?.[quote.language]?.splice(quoteIndex, 1);
-      } else {
-        throw new Error(response.body.message);
-      }
-    } else {
-      // Remove from favorites
-      const response = await Ape.users.addQuoteToFavorites({
-        body: {
-          language: quote.language,
-          quoteId: `${quote.id}`,
-        },
-      });
-
-      if (response.status === 200) {
-        snapshot.favoriteQuotes ??= {};
-        snapshot.favoriteQuotes[quote.language] ??= [];
-        snapshot.favoriteQuotes[quote.language]?.push(`${quote.id}`);
-      } else {
-        throw new Error(response.body.message);
-      }
+    const favorites = favoriteQuotes.get();
+    const language = removeLanguageSize(quote.language);
+    const ids = new Set(favorites[language] ?? []);
+    if (isFavorite) ids.add(String(quote.id));
+    else ids.delete(String(quote.id));
+    favorites[language] = [...ids];
+    if (!favoriteQuotes.set(favorites)) {
+      throw new Error("Unable to save favorite quotes locally");
     }
   }
 }

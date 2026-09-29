@@ -4,12 +4,11 @@ import { createColumnHelper } from "@tanstack/solid-table";
 import { format as dateFormat } from "date-fns/format";
 import { Accessor, createMemo, createSignal, JSXElement, Show } from "solid-js";
 
-import { type TagItem, useTagsLiveQuery } from "../../../collections/tags";
-import { SnapshotResult } from "../../../constants/default-snapshot";
+import { removeLocalResult } from "../../../offline/state";
+import { PracticeResult } from "../../../offline/types";
 import { getFormatting } from "../../../states/core";
-import { showEditResultTagsModal } from "../../../states/edit-result-tags";
 import { showModal } from "../../../states/modals";
-import { showNoticeNotification } from "../../../states/notifications";
+import { showSimpleModal } from "../../../states/simple-modal";
 import { cn } from "../../../utils/cn";
 import { Formatting } from "../../../utils/format";
 import { replaceUnderscoresWithSpaces } from "../../../utils/strings";
@@ -19,12 +18,12 @@ import { DataTable, DataTableColumnDef } from "../../ui/table/DataTable";
 import { MiniResultChart } from "./MiniResultChart";
 
 type Sorting = {
-  field: keyof SnapshotResult<Mode>;
+  field: keyof PracticeResult;
   direction: "asc" | "desc";
 };
 
 export function Table<M extends Mode>(props: {
-  data: SnapshotResult<M>[];
+  data: PracticeResult<M>[];
   onSortingChange: (sorting: Sorting) => void;
   selectedRowId: Accessor<string | null>;
 }): JSXElement {
@@ -32,12 +31,10 @@ export function Table<M extends Mode>(props: {
     undefined,
   );
 
-  const tags = useTagsLiveQuery();
-
   const columns = createMemo(() =>
     getColumns<M>({
       format: getFormatting(),
-      tags: tags(),
+
       onMiniResultChartSelected: (id) => {
         setSelectedResult(id);
         if (id !== undefined) showModal("MiniResultChartModal");
@@ -57,7 +54,7 @@ export function Table<M extends Mode>(props: {
             props.onSortingChange({ field: "timestamp", direction: "desc" });
           } else {
             props.onSortingChange({
-              field: val[0]?.id as keyof SnapshotResult<Mode>,
+              field: val[0]?.id as keyof PracticeResult,
               direction: val[0]?.desc ? "desc" : "asc",
             });
           }
@@ -83,14 +80,12 @@ export function Table<M extends Mode>(props: {
 
 function getColumns<M extends Mode>({
   format,
-  tags,
   onMiniResultChartSelected,
 }: {
   format: Formatting;
-  tags: TagItem[];
   onMiniResultChartSelected(val: string): void;
-}): DataTableColumnDef<SnapshotResult<M>>[] {
-  const defineColumn = createColumnHelper<SnapshotResult<M>>().accessor;
+}): DataTableColumnDef<PracticeResult<M>>[] {
+  const defineColumn = createColumnHelper<PracticeResult<M>>().accessor;
   const columns = [
     defineColumn("isPb", {
       header: "",
@@ -163,6 +158,22 @@ function getColumns<M extends Mode>({
 
         return (
           <div class="flex gap-0.5">
+            <Button
+              variant="text"
+              fa={{ icon: "fa-trash" }}
+              balloon={{ text: "Delete saved result", position: "up" }}
+              onClick={() =>
+                showSimpleModal({
+                  title: "Delete result",
+                  text: "Delete this saved result? Personal bests and history will be recalculated.",
+                  buttonText: "delete",
+                  execFn: async () => {
+                    await removeLocalResult(info.getValue());
+                    return { status: "success", message: "Result deleted" };
+                  },
+                })
+              }
+            />
             <span aria-label={info.row.original.language} data-balloon-pos="up">
               <Fa icon="fa-globe-americas" fixedWidth={true} />
             </span>
@@ -221,53 +232,6 @@ function getColumns<M extends Mode>({
               />
             </span>
           </div>
-        );
-      },
-      meta: {
-        breakpoint: "sm",
-      },
-    }),
-    defineColumn("tags", {
-      header: "tags",
-      enableSorting: false,
-      cell: (info) => {
-        const hasTags = () => info.getValue().length > 0;
-        return (
-          <Button
-            variant="text"
-            class={
-              hasTags() ? "[--themable-button-text:var(--text-color)]" : ""
-            }
-            fa={{
-              icon: info.getValue().length > 1 ? "fa-tags" : "fa-tag",
-              fixedWidth: true,
-            }}
-            balloon={{
-              text: hasTags()
-                ? info
-                    .getValue()
-                    .map(
-                      (it) =>
-                        tags.find((tag) => tag._id === it)?.name ??
-                        "unknown tag",
-                    )
-                    .join(", ")
-                : "no tags",
-            }}
-            onClick={() => {
-              if (tags.length === 0) {
-                showNoticeNotification(
-                  "You have no tags. You can create one in the tags section of the settings page.",
-                );
-                return;
-              }
-
-              showEditResultTagsModal({
-                _id: info.row.original._id,
-                tags: info.getValue(),
-              });
-            }}
-          />
         );
       },
       meta: {

@@ -21,12 +21,8 @@ import { tryCatchSync } from "@monkeytype/util/trycatch";
 import { decompressFromURI } from "lz-ts";
 import { z } from "zod";
 
-import Ape from "../ape";
 import { setConfig } from "../config/setters";
 import { Config } from "../config/store";
-import * as DB from "../db";
-import { authEvent } from "../events/auth";
-import { hideLoaderBar, showLoaderBar } from "../states/loader-bar";
 import {
   showErrorNotification,
   showNoticeNotification,
@@ -37,48 +33,6 @@ import * as CustomText from "../test/custom-text";
 import { restart as restartTest } from "../test/test-logic";
 import * as Misc from "../utils/misc";
 import * as ChallengeController from "./challenge-controller";
-
-export async function linkDiscord(hashOverride: string): Promise<void> {
-  if (!hashOverride) return;
-  const fragment = new URLSearchParams(hashOverride.slice(1));
-  if (fragment.has("access_token")) {
-    history.replaceState(null, "", "/");
-    const accessToken = fragment.get("access_token") as string;
-    const tokenType = fragment.get("token_type") as string;
-    const state = fragment.get("state") as string;
-
-    showLoaderBar();
-    const response = await Ape.users.linkDiscord({
-      body: { tokenType, accessToken, state },
-    });
-    hideLoaderBar();
-
-    if (response.status !== 200) {
-      showErrorNotification("Failed to link Discord", { response });
-      return;
-    }
-
-    if (response.body.data === null) {
-      showErrorNotification("Failed to link Discord: data returned was null");
-      return;
-    }
-
-    showSuccessNotification(response.body.message);
-
-    const snapshot = DB.getSnapshot();
-    if (!snapshot) return;
-
-    const { discordId, discordAvatar } = response.body.data;
-    if (discordId !== undefined) {
-      snapshot.discordId = discordId;
-    }
-    if (discordAvatar !== undefined) {
-      snapshot.discordAvatar = discordAvatar;
-    }
-
-    DB.setSnapshot(snapshot);
-  }
-}
 
 const customThemeUrlDataSchema = z.object({
   c: CustomThemeColorsSchema,
@@ -341,17 +295,3 @@ export async function loadChallengeFromUrl(
       console.error(e);
     });
 }
-
-authEvent.subscribe(async (event) => {
-  if (event.type === "authStateChanged") {
-    const search = window.location.search;
-    const hash = window.location.hash;
-
-    await event.data.loadPromise;
-
-    loadCustomThemeFromUrl(search);
-    loadTestSettingsFromUrl(search);
-    void loadChallengeFromUrl(search);
-    void linkDiscord(hash);
-  }
-});

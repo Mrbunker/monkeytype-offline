@@ -1,14 +1,9 @@
 import * as Misc from "../utils/misc";
 import * as Strings from "../utils/strings";
-import {
-  getActivePage,
-  setActivePage,
-  setSelectedProfileName,
-} from "../states/core";
+import { getActivePage, setActivePage } from "../states/core";
 import * as PageTest from "../pages/test";
 import * as PageLoading from "../pages/loading";
 import * as PageTransition from "../legacy-states/page-transition";
-import * as AdController from "../controllers/ad-controller";
 import * as Focus from "../test/focus";
 import Page, {
   PageName,
@@ -20,24 +15,6 @@ import Page, {
 } from "../pages/page";
 import { onDOMReady, qsa, qsr } from "../utils/dom";
 import * as Skeleton from "../utils/skeleton";
-import {
-  LeaderboardUrlParamsSchema,
-  readLeaderboardGetParameters,
-} from "../states/leaderboard-selection";
-import { configurationPromise as serverConfigurationPromise } from "../ape/server-configuration";
-import { getSnapshot } from "../db";
-import * as TodayTracker from "../test/today-tracker";
-import { isResultsReady, waitForResultsReady } from "../collections/results";
-import {
-  invalidateConnections,
-  isConnectionsReady,
-  waitForConnectionsReady,
-} from "../collections/connections";
-import {
-  AccountSettingsUrlParamsSchema,
-  readAccountSettingsGetParameters,
-} from "../states/account-settings";
-
 type ChangeOptions = {
   force?: boolean;
   params?: Record<string, string>;
@@ -75,84 +52,8 @@ const pages = {
     },
   }),
   about: solidPage("about"),
-  account: solidPage("account", {
-    loadingOptions: {
-      loadingMode: () => {
-        if (isResultsReady()) {
-          return "none";
-        } else {
-          return "sync";
-        }
-      },
-      loadingPromise: async () => {
-        if (getSnapshot() === null || getSnapshot() === undefined) {
-          throw new Error(
-            "Looks like your account data didn't download correctly. Please refresh the page.<br>If this error persists, please contact support.",
-          );
-        }
-        await waitForResultsReady();
-        TodayTracker.addAllFromToday();
-      },
-      style: "bar",
-      keyframes: [
-        {
-          percentage: 90,
-          durationMs: 2000,
-          text: "Downloading results...",
-        },
-      ],
-    },
-  }),
-  login: solidPage("login"),
-  profile: solidPage("profile", {
-    beforeShow: async (options) => {
-      setSelectedProfileName(options.params?.["uidOrName"]);
-    },
-  }),
-  profileSearch: solidPage("profileSearch"),
+  account: solidPage("account"),
   404: solidPage("404"),
-  friends: solidPage("friends", {
-    beforeShow: async () => {
-      await invalidateConnections();
-    },
-    loadingOptions: {
-      loadingMode: () => (isConnectionsReady() ? "none" : "sync"),
-      loadingPromise: async () => {
-        await Promise.all([
-          serverConfigurationPromise,
-          waitForConnectionsReady(),
-        ]);
-      },
-      style: "bar",
-      keyframes: [
-        { percentage: 50, durationMs: 1500, text: "Downloading friends..." },
-        {
-          percentage: 50,
-          durationMs: 1500,
-          text: "Downloading friend requests...",
-        },
-      ],
-    },
-  }),
-  accountSettings: solidPage("accountSettings", {
-    urlParamsSchema: AccountSettingsUrlParamsSchema,
-    beforeShow: async (options) => {
-      readAccountSettingsGetParameters(options.urlParams);
-    },
-  }),
-  leaderboards: solidPage("leaderboards", {
-    urlParamsSchema: LeaderboardUrlParamsSchema,
-    loadingOptions: {
-      style: "spinner",
-      loadingMode: () => "sync",
-      loadingPromise: async () => {
-        await serverConfigurationPromise;
-      },
-    },
-    beforeShow: async (options) => {
-      readLeaderboardGetParameters(options.urlParams);
-    },
-  }),
 };
 
 function updateOpenGraphUrl(): void {
@@ -405,7 +306,6 @@ export async function change(
 
   //wrapup
   PageTransition.set(false);
-  void AdController.reinstate();
   return true;
 }
 

@@ -1,10 +1,6 @@
 import { navigate } from "../../controllers/route-controller";
-import { isAuthenticated } from "../../states/core";
 import { toggleFullscreen } from "../../utils/misc";
-import { Command, withValidation } from "../types";
-import { remoteValidation } from "../../utils/remote-validation";
-import { UserNameWithoutFilterSchema } from "@monkeytype/schemas/users";
-import Ape from "../../ape";
+import { Command } from "../types";
 
 const commands: Command[] = [
   {
@@ -12,26 +8,17 @@ const commands: Command[] = [
     display: "View Typing Page",
     alias: "navigate go to start begin type test",
     icon: "fa-keyboard",
-    exec: (): void => {
+    exec: () => {
       void navigate("/");
     },
   },
   {
-    id: "viewLeaderboards",
-    display: "View Leaderboards",
-    alias: "navigate go to",
-    icon: "fa-crown",
-    exec: (): void => {
-      void navigate("/leaderboards");
-    },
-  },
-  {
-    id: "viewAbout",
-    display: "View About Page",
-    alias: "navigate go to",
-    icon: "fa-info",
-    exec: (): void => {
-      void navigate("/about");
+    id: "viewAccount",
+    display: "View Local History",
+    alias: "navigate go to stats results",
+    icon: "fa-chart-line",
+    exec: () => {
+      void navigate("/account");
     },
   },
   {
@@ -39,49 +26,26 @@ const commands: Command[] = [
     display: "View Settings Page",
     alias: "navigate go to",
     icon: "fa-cog",
-    exec: (): void => {
+    exec: () => {
       void navigate("/settings");
     },
   },
-
   {
-    id: "viewAccount",
-    display: "View Account Page",
-    alias: "navigate go to stats",
-    icon: "fa-user",
-    exec: (): void => {
-      isAuthenticated() ? void navigate("/account") : void navigate("/login");
+    id: "viewAbout",
+    display: "About This Offline Fork",
+    alias: "navigate go to",
+    icon: "fa-info",
+    exec: () => {
+      void navigate("/about");
     },
   },
-  withValidation({
-    id: "searchProfile",
-    display: "Search for a profile",
-    alias: "profile user search find lookup",
-    icon: "fa-search",
-    input: true,
-    validation: {
-      schema: UserNameWithoutFilterSchema,
-      debounceDelay: 1000,
-      isValid: remoteValidation(
-        async (name) => Ape.users.getProfile({ params: { uidOrName: name } }),
-        {
-          on4xx: () => "Unknown user",
-        },
-      ),
-    },
-    exec: ({ input }): void => {
-      if (input === undefined) return;
-      void navigate(`/profile/${input}`);
-    },
-  }),
   {
     id: "toggleFullscreen",
     display: "Toggle Fullscreen",
     icon: "fa-expand",
-    exec: (): void => {
+    exec: () => {
       toggleFullscreen();
     },
   },
 ];
-
 export default commands;

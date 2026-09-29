@@ -1,175 +1,77 @@
-import { CustomTheme } from "@monkeytype/schemas/users";
+import { CustomTheme, CustomThemeSchema } from "@monkeytype/schemas/users";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
-import {
-  createCollection,
-  createOptimisticAction,
-  useLiveQuery,
-} from "@tanstack/solid-db";
-import Ape from "../ape";
+import { createCollection, useLiveQuery } from "@tanstack/solid-db";
+import { z } from "zod";
 import { queryClient } from "../queries";
-import { baseKey } from "../queries/utils/keys";
-import { applyIdWorkaround, tempId } from "./utils/misc";
-import { isAuthenticated } from "../states/core";
+import { LocalStorageWithSchema } from "../utils/local-storage-with-schema";
 
 export type CustomThemeItem = CustomTheme;
-
-const queryKeys = {
-  root: () => [...baseKey("customThemes", { isUserSpecific: true })],
-};
-
-// oxlint-disable-next-line typescript/explicit-function-return-type
-export function useCustomThemesLiveQuery() {
-  return useLiveQuery((q) => {
-    return q
-      .from({ customTheme: customThemesCollection })
-      .orderBy(({ customTheme }) => customTheme.name, "asc");
-  });
-}
-
-const customThemesCollection = createCollection(
+const storage = new LocalStorageWithSchema({
+  key: "monkeytype-local-themes",
+  schema: z.array(CustomThemeSchema),
+  fallback: [],
+});
+const collection = createCollection(
   queryCollectionOptions({
-    staleTime: Infinity,
-    gcTime: Infinity, //remove when __nonReactive is removed
-    startSync: true,
-    queryKey: queryKeys.root(),
+    queryKey: ["local", "customThemes"],
     queryClient,
-    enabled: isAuthenticated,
-    getKey: (it) => it._id,
-    queryFn: async () => {
-      const response = await Ape.users.getCustomThemes();
-
-      if (response.status !== 200) {
-        throw new Error(
-          `Error fetching custom themes: ${response.body.message}`,
-        );
-      }
-      return response.body.data.map(applyIdWorkaround);
-    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+    startSync: true,
+    getKey: (theme) => theme._id,
+    queryFn: async () => storage.get(),
   }),
 );
 
-type ActionType = {
-  addCustomTheme: {
-    name: string;
-    colors: CustomTheme["colors"];
-  };
-  editCustomTheme: {
-    themeId: string;
-    name: string;
-    colors: CustomTheme["colors"];
-  };
-  deleteCustomTheme: {
-    themeId: string;
-  };
-};
-
-const actions = {
-  addCustomTheme: createOptimisticAction<ActionType["addCustomTheme"]>({
-    onMutate: ({ name, colors }) => {
-      customThemesCollection.insert({
-        _id: tempId(),
-        name,
-        colors,
-      });
-    },
-    mutationFn: async ({ name, colors }) => {
-      const response = await Ape.users.addCustomTheme({
-        body: { name, colors },
-      });
-      if (response.status !== 200) {
-        throw new Error(`Failed to add custom theme: ${response.body.message}`);
-      }
-
-      if (response.body.data === null) {
-        throw new Error("Failed to add custom theme: No data returned");
-      }
-
-      customThemesCollection.utils.writeInsert({
-        _id: response.body.data._id,
-        name,
-        colors,
-      });
-    },
-  }),
-  editCustomTheme: createOptimisticAction<ActionType["editCustomTheme"]>({
-    onMutate: ({ themeId, name, colors }) => {
-      customThemesCollection.update(themeId, (theme) => {
-        theme.name = name;
-        theme.colors = colors;
-      });
-    },
-    mutationFn: async ({ themeId, name, colors }) => {
-      const response = await Ape.users.editCustomTheme({
-        body: { themeId, theme: { name, colors } },
-      });
-      if (response.status !== 200) {
-        throw new Error(
-          `Failed to edit custom theme: ${response.body.message}`,
-        );
-      }
-
-      customThemesCollection.utils.writeUpdate({
-        _id: themeId,
-        name,
-        colors,
-      });
-    },
-  }),
-  deleteCustomTheme: createOptimisticAction<ActionType["deleteCustomTheme"]>({
-    onMutate: ({ themeId }) => {
-      customThemesCollection.delete(themeId);
-    },
-    mutationFn: async ({ themeId }) => {
-      const response = await Ape.users.deleteCustomTheme({
-        body: { themeId },
-      });
-      if (response.status !== 200) {
-        throw new Error(
-          `Failed to delete custom theme: ${response.body.message}`,
-        );
-      }
-      customThemesCollection.utils.writeDelete(themeId);
-    },
-  }),
-};
-
-// --- Public API ---
-
-function getCustomThemes(): CustomThemeItem[] {
-  return [...customThemesCollection.values()].sort((a, b) =>
-    a.name.localeCompare(b.name),
+// oxlint-disable-next-line typescript/explicit-function-return-type
+export function useCustomThemesLiveQuery() {
+  return useLiveQuery((q) =>
+    q.from({ theme: collection }).orderBy(({ theme }) => theme.name, "asc"),
   );
 }
 
-function getCustomTheme(id: string): CustomThemeItem | undefined {
-  return customThemesCollection.get(id);
+export async function saveCustomThemes(themes: CustomTheme[]): Promise<void> {
+  if (!storage.set(themes)) {
+    throw new Error("Unable to save custom themes locally");
+  }
+  await collection.utils.refetch();
 }
 
 export async function addCustomTheme(
-  params: ActionType["addCustomTheme"],
+  theme: Pick<CustomTheme, "name" | "colors">,
 ): Promise<void> {
-  const transaction = actions.addCustomTheme(params);
-  await transaction.isPersisted.promise;
+  await saveCustomThemes([
+    ...storage.get(),
+    { ...theme, _id: crypto.randomUUID() },
+  ]);
 }
 
 export async function editCustomTheme(
-  params: ActionType["editCustomTheme"],
+  theme: Pick<CustomTheme, "name" | "colors"> & { themeId: string },
 ): Promise<void> {
-  const transaction = actions.editCustomTheme(params);
-  await transaction.isPersisted.promise;
+  await saveCustomThemes(
+    storage
+      .get()
+      .map((item) =>
+        item._id === theme.themeId
+          ? { _id: item._id, name: theme.name, colors: theme.colors }
+          : item,
+      ),
+  );
 }
 
-export async function deleteCustomTheme(
-  params: ActionType["deleteCustomTheme"],
-): Promise<void> {
-  const transaction = actions.deleteCustomTheme(params);
-  await transaction.isPersisted.promise;
+export async function deleteCustomTheme({
+  themeId,
+}: {
+  themeId: string;
+}): Promise<void> {
+  await saveCustomThemes(
+    storage.get().filter((theme) => theme._id !== themeId),
+  );
 }
 
-/**
- * Used for non reactive access. Do not use in Solid components.
- */
 export const __nonReactive = {
-  getCustomThemes,
-  getCustomTheme,
+  getCustomThemes: (): CustomTheme[] => storage.get(),
+  getCustomTheme: (id: string): CustomTheme | undefined =>
+    storage.get().find((theme) => theme._id === id),
 };

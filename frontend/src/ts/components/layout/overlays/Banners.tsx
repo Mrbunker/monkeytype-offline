@@ -10,11 +10,9 @@ import {
   removeBanner,
 } from "../../../states/banners";
 import { setGlobalOffsetTop } from "../../../states/core";
-import { getSnapshot } from "../../../states/snapshot";
 import { cn } from "../../../utils/cn";
 import { isProfilerMode } from "../../../utils/profiler-mode";
 import { Fa } from "../../common/Fa";
-import { showUpdateNameModal } from "../../modals/account-settings/UpdateNameModal";
 
 function Banner(props: BannerType): JSXElement {
   const remove = (): void => {
@@ -74,34 +72,6 @@ function Banner(props: BannerType): JSXElement {
 
 export function Banners(): JSXElement {
   const [ref, element] = useRefWithUtils();
-
-  let nameChangeAdded = false;
-  createEffectOn(
-    () => getSnapshot()?.needsToChangeName,
-    (needsToChange) => {
-      if (needsToChange && !nameChangeAdded) {
-        nameChangeAdded = true;
-        addBanner({
-          level: "error",
-          icon: "fas fa-exclamation-triangle",
-          customContent: (
-            <>
-              You need to update your account name.{" "}
-              <button
-                type="button"
-                class="px-2 py-1"
-                onClick={() => showUpdateNameModal()}
-              >
-                Click here
-              </button>{" "}
-              to change it and learn more about why.
-            </>
-          ),
-          important: true,
-        });
-      }
-    },
-  );
 
   const setGlobalOffsetSignal = (): void => {
     const height = element()?.getOffsetHeight() ?? 0;

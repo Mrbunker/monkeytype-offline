@@ -11,20 +11,29 @@ type FileDB = DBSchema & {
 type Filename = "LocalBackgroundFile" | "LocalFontFamilyFile";
 
 class FileStorage {
-  private dbPromise: Promise<IDBPDatabase<FileDB>>;
+  private dbPromise?: Promise<IDBPDatabase<FileDB>>;
+  private dbName: string;
   private signals = new Map<
     Filename,
     [get: () => number, set: (v: number | ((prev: number) => number)) => void]
   >();
 
   constructor(dbName = "file-storage-db") {
-    this.dbPromise = openDB<FileDB>(dbName, 1, {
+    this.dbName = dbName;
+  }
+
+  private async database(): Promise<IDBPDatabase<FileDB>> {
+    this.dbPromise ??= openDB<FileDB>(this.dbName, 1, {
       upgrade(db) {
         if (!db.objectStoreNames.contains("files")) {
           db.createObjectStore("files");
         }
       },
+    }).catch((error: unknown) => {
+      this.dbPromise = undefined;
+      throw error;
     });
+    return this.dbPromise;
   }
 
   private getSignal(
@@ -54,24 +63,29 @@ class FileStorage {
   }
 
   async storeFile(filename: Filename, dataUrl: string): Promise<void> {
-    const db = await this.dbPromise;
+    const db = await this.database();
     await db.put("files", dataUrl, filename);
     this.notify(filename);
   }
 
   async getFile(filename: Filename): Promise<string | undefined> {
-    const db = await this.dbPromise;
-    return db.get("files", filename);
+    try {
+      const db = await this.database();
+      return await db.get("files", filename);
+    } catch {
+      // Optional uploaded assets must not prevent typing when storage is disabled.
+      return undefined;
+    }
   }
 
   async deleteFile(filename: Filename): Promise<void> {
-    const db = await this.dbPromise;
+    const db = await this.database();
     await db.delete("files", filename);
     this.notify(filename);
   }
 
   async listFilenames(): Promise<Filename[]> {
-    const db = await this.dbPromise;
+    const db = await this.database();
     return db.getAllKeys("files") as Promise<Filename[]>;
   }
 
