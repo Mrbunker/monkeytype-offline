@@ -4,6 +4,8 @@ import {
 } from "../states/notifications";
 import { showSimpleModal } from "../states/simple-modal";
 import { z } from "zod";
+import { openDictionary } from "../dictionary/state";
+import { normalizeWord, WordSchema } from "../dictionary/schema";
 
 import { Config } from "../config/store";
 import { setConfig } from "../config/setters";
@@ -1385,6 +1387,37 @@ async function loadWordsHistory(): Promise<boolean> {
     }
 
     wordEl.setAttribute("input", inputAttribute.replace(/ /g, "_"));
+
+    if (
+      Config.mode !== "zen" &&
+      Config.language.startsWith("english") &&
+      WordSchema.safeParse(normalizeWord(target)).success
+    ) {
+      wordEl.dataset["dictionaryWord"] = target.trim();
+      wordEl.className = `${wordEl.className.replace("nocursor", "")} cursor-pointer focus-visible:outline focus-visible:outline-main`;
+      wordEl.tabIndex = 0;
+      wordEl.setAttribute("role", "button");
+      wordEl.setAttribute("aria-label", `查词 ${target.trim()}`);
+      wordEl.setAttribute("title", "点击查词 · Enter / Space");
+      const lookup = (): void => {
+        if (!getResultVisible()) return;
+        wordEl.querySelector(".wordInputHighlight")?.remove();
+        openDictionary({
+          word: target.trim(),
+          input: inputAttribute,
+          burst: burstValue,
+          language: Config.language,
+        });
+      };
+      wordEl.addEventListener("click", lookup);
+      wordEl.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.stopPropagation();
+          lookup();
+        }
+      });
+    }
 
     wordEl.innerHTML = buildWordLettersHTML(input, corrected, target);
 

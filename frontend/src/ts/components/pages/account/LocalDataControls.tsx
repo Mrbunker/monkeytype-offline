@@ -40,8 +40,8 @@ export function LocalDataControls() {
       <p class="text-sm text-sub">
         {getLocalResults().length} saved results in this browser. Export a
         backup before clearing browser data or moving to another device. Import
-        merges results and restores saved settings, themes and favorite quotes.
-        Local image and font files are not included.
+        merges results and vocabulary and restores saved settings, themes and
+        favorite quotes. Local image and font files are not included.
       </p>
       <Show when={!isLocalDataReady()}>
         <p role="status">Loading local results…</p>
@@ -83,7 +83,7 @@ export function LocalDataControls() {
               anchor.click();
               setTimeout(() => URL.revokeObjectURL(url), 1000);
               setMessage(
-                "Backup exported: results, settings, custom themes and favorite quotes.",
+                "Backup exported: results, vocabulary, settings, custom themes and favorite quotes.",
               );
             })
           }

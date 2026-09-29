@@ -1,6 +1,7 @@
 import { createStore } from "solid-js/store";
 
 export type ModalId =
+  | "Dictionary"
   | "VersionHistory"
   | "Contact"
   | "Support"

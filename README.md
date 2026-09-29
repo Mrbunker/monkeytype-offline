@@ -10,7 +10,7 @@ Requires Node.js 24 and pnpm 11.21.0 (versions are declared in `package.json`).
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm dev:source
 ```
 
 Development runs on `http://127.0.0.1:3000`. Dependency installation needs internet access; running a built site does not require external services or credentials.
@@ -22,8 +22,8 @@ pnpm build
 npm run dev
 ```
 
-Open `http://127.0.0.1:8032`. The repository already includes a verified
-`frontend/dist`, so `npm run dev` only needs Node.js: it does not run
+Open `http://127.0.0.1:8032`. After building `frontend/dist`,
+`npm run dev` only needs Node.js: it does not run
 `npm install`, rebuild the project, use Python, or access an external service.
 Set `PORT=3000 npm run dev` or `HOST=0.0.0.0 npm run dev` to change the listener.
 
@@ -46,13 +46,21 @@ Upload the contents of `frontend/dist` to that directory. No Firebase project, d
 
 - Settings, custom themes and favorite quotes stay in this browser.
 - Valid completed tests are saved to IndexedDB. History includes filters, result details, charts and personal bests.
-- JSON export includes results, settings, custom themes and favorite quotes. Uploaded background/font files are not included.
+- JSON export includes results, vocabulary, settings, custom themes and favorite quotes. Uploaded background/font files and recent dictionary searches are not included.
 - Import validates the entire file before writing. Results merge by ID; existing records win. PB flags are recomputed. Saved preferences replace current preferences. If preferences cannot be restored after results are saved, the UI reports the partial restore explicitly; retrying does not duplicate results.
 - Deleting a result recalculates PBs. Other tabs refresh after local history changes.
 - History supports up to 50,000 records; imports are limited to 50 MB. Export before clearing browser storage. Browser profiles and different origins/ports have separate data.
 - Storage failure is visible and does not prevent typing. A failed result save can be retried from the result page.
 
 The original result eligibility rules remain in place: failed, repeated, too-short or otherwise invalid tests are not saved. PB eligibility and grouping follow the official rules. TTS uses installed local browser/OS voices only; availability depends on the device.
+
+## Offline dictionary
+
+Open the book button in the navigation bar, or click an English target word in a completed test's input history. Keyboard users can focus a result word and press Enter or Space. Lookup shows Chinese/English definitions, phonetics, word forms and vocabulary tags from ECDICT. Lookup is disabled while a test is running.
+
+Save words to the vocabulary tab, select them and start a custom typing practice. Up to 10,000 saved words persist in IndexedDB and travel with version 2 JSON backups; version 1 backups still import without clearing vocabulary. The last 20 successful searches stay in this browser.
+
+The bundled dictionary contains 400,181 entries across 700 lazy-loaded shards (about 76 MiB on disk, largest shard 2.2 MiB). It adds no third-party runtime requests and is not downloaded on initial page load. The fixed upstream revision, MIT license, reproducible Node conversion command and implementation details are documented in [docs/DICTIONARY.zh-CN.md](docs/DICTIONARY.zh-CN.md). Full bilingual example sentences and audio are not bundled.
 
 ## Checks
 

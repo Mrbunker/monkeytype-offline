@@ -6,16 +6,17 @@ import {
   saveCustomThemes,
 } from "../collections/custom-themes";
 import { favoriteQuotes } from "./favorite-quotes";
-import { readResults, importResults } from "./storage";
+import { readResults, readVocabulary, importPracticeData } from "./storage";
 import { LocalResult } from "./results";
 
 export async function exportBackup(): Promise<string> {
   return JSON.stringify(
     BackupSchema.parse({
       application: "monkeytype-local-practice",
-      version: 1,
+      version: 2,
       exportedAt: Date.now(),
       results: await readResults(),
+      vocabulary: await readVocabulary(),
       preferences: {
         config: configLS.get(),
         customThemes: themes.getCustomThemes(),
@@ -35,10 +36,13 @@ export async function importBackup(json: string): Promise<{
   preferencesError?: string;
 }> {
   if (json.length > 50 * 1024 * 1024) throw new Error("Backup exceeds 50 MB.");
-  const { preferences, ...resultsBackup } = BackupSchema.parse(
+  const { preferences, vocabulary, ...resultsBackup } = BackupSchema.parse(
     JSON.parse(json) as unknown,
   );
-  const outcome = await importResults(JSON.stringify(resultsBackup));
+  const outcome = await importPracticeData(
+    JSON.stringify({ ...resultsBackup, version: 1 }),
+    vocabulary,
+  );
   let preferencesError: string | undefined;
   if (preferences !== undefined) {
     try {

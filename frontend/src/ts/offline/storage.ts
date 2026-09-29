@@ -1,15 +1,21 @@
 import { IDBPDatabase, openDB } from "idb";
 import { z } from "zod";
 import {
+  VocabularySchema,
+  VocabularyBackupSchema,
+  type VocabularyEntry,
+} from "../dictionary/schema";
+import {
   LocalResult,
   LocalResultSchema,
   recomputePersonalBests,
 } from "./results";
 
 const DATABASE_NAME = "monkeytype-local-practice";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 type PracticeDatabase = {
+  vocabulary: { key: string; value: VocabularyEntry };
   results: {
     key: string;
     value: LocalResult;
@@ -32,9 +38,14 @@ async function database(): Promise<IDBPDatabase<PracticeDatabase>> {
   databasePromise ??= Promise.resolve()
     .then(async () =>
       openDB<PracticeDatabase>(DATABASE_NAME, DATABASE_VERSION, {
-        upgrade(db) {
-          const results = db.createObjectStore("results", { keyPath: "_id" });
-          results.createIndex("timestamp", "timestamp");
+        upgrade(db, oldVersion) {
+          if (oldVersion < 1) {
+            const results = db.createObjectStore("results", { keyPath: "_id" });
+            results.createIndex("timestamp", "timestamp");
+          }
+          if (oldVersion < 2) {
+            db.createObjectStore("vocabulary", { keyPath: "word" });
+          }
         },
         blocking() {
           void databasePromise?.then((db) => db.close());
@@ -147,4 +158,80 @@ export async function importResults(json: string): Promise<{
     return [...previous, ...additions];
   });
   return { results, imported };
+}
+
+export async function readVocabulary(): Promise<VocabularyEntry[]> {
+  return (await (await database()).getAll("vocabulary"))
+    .map((entry) => VocabularySchema.parse(entry))
+    .sort((a, b) => b.createdAt - a.createdAt || a.word.localeCompare(b.word));
+}
+
+export async function saveVocabulary(entry: VocabularyEntry): Promise<void> {
+  const parsed = VocabularySchema.parse(entry);
+  const transaction = (await database()).transaction("vocabulary", "readwrite");
+  if (!(await transaction.store.get(parsed.word))) {
+    if ((await transaction.store.count()) >= 10000) {
+      await transaction.done;
+      throw new Error("生词本已达 10,000 词，请先导出备份并清理。");
+    }
+    await transaction.store.put(parsed);
+  }
+  await transaction.done;
+}
+
+export async function deleteVocabulary(words: string[]): Promise<void> {
+  const transaction = (await database()).transaction("vocabulary", "readwrite");
+  for (const word of words) await transaction.store.delete(word);
+  await transaction.done;
+}
+
+/** Merge results and vocabulary atomically; old backups leave vocabulary intact. */
+export async function importPracticeData(
+  json: string,
+  vocabulary: VocabularyEntry[] = [],
+): Promise<{ results: LocalResult[]; imported: number }> {
+  const backup = ResultsBackupSchema.parse(JSON.parse(json) as unknown);
+  const incoming = VocabularyBackupSchema.parse(vocabulary);
+  const transaction = (await database()).transaction(
+    ["results", "vocabulary"],
+    "readwrite",
+  );
+  try {
+    const previous = (await transaction.objectStore("results").getAll()).map(
+      (result) => LocalResultSchema.parse(result),
+    );
+    const known = new Set(previous.map((result) => result._id));
+    const additions = backup.results.filter((result) => {
+      if (known.has(result._id)) return false;
+      known.add(result._id);
+      return true;
+    });
+    const results = recomputePersonalBests([...previous, ...additions]);
+    if (results.length > 50000) {
+      throw new Error("Backup would exceed 50,000 results.");
+    }
+    const vocabularyStore = transaction.objectStore("vocabulary");
+    const saved = new Set(await vocabularyStore.getAllKeys());
+    for (const entry of incoming) {
+      if (saved.has(entry.word)) continue;
+      saved.add(entry.word);
+      if (saved.size > 10000) {
+        throw new Error("Backup would exceed 10,000 vocabulary entries.");
+      }
+      await vocabularyStore.put(entry);
+    }
+    for (const result of results) {
+      await transaction.objectStore("results").put(result);
+    }
+    await transaction.done;
+    return { results, imported: additions.length };
+  } catch (error) {
+    try {
+      transaction.abort();
+    } catch {
+      /* already aborted */
+    }
+    await transaction.done.catch(() => undefined);
+    throw error;
+  }
 }

@@ -24,6 +24,15 @@ export function AboutPage(): JSXElement {
           Distributed under GPL-3.0. See the source repository for the license
           and modification details.
         </p>
+        <p>
+          English dictionary data: ECDICT, revision
+          bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b. Distributed with its{" "}
+          <a href={`${import.meta.env.BASE_URL}dictionaries/en/LICENSE.txt`}>
+            MIT license
+          </a>
+          . Dictionary lookup runs from the same static site. Vocabulary is
+          stored in this browser and included in JSON backups.
+        </p>
       </div>
     </Page>
   );

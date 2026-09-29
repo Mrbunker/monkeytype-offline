@@ -1,8 +1,13 @@
 import { JSXElement } from "solid-js";
 
+import { openDictionary } from "../../../dictionary/state";
 import { restartTestEvent } from "../../../events/test";
 import { getActivePage } from "../../../states/core";
-import { getFocus } from "../../../states/test";
+import {
+  isTestActive,
+  isResultCalculating,
+  getFocus,
+} from "../../../states/test";
 import { cn } from "../../../utils/cn";
 import { Button } from "../../common/Button";
 
@@ -45,6 +50,14 @@ export function Nav(): JSXElement {
         dataset={{ "data-nav-item": "settings" }}
       />
       <div class="grow"></div>
+      <Button
+        variant="text"
+        fa={{ icon: "fa-book", fixedWidth: true }}
+        class={buttonClass()}
+        aria-label="Dictionary / 查词"
+        disabled={isTestActive() || isResultCalculating()}
+        onClick={() => openDictionary()}
+      />
       <Button
         variant="text"
         fa={{ icon: "fa-info", fixedWidth: true }}
