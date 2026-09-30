@@ -247,4 +247,17 @@ test("mobile lookup handles empty results, download retry and stale searches", a
   const bounds = await page.locator("#DictionaryModal .modal").boundingBox();
   expect(bounds?.x).toBeGreaterThanOrEqual(0);
   expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(390);
+  const content = page.locator("#DictionaryModal .modal > div").last();
+  await page
+    .getByText("英文词典 · 中英释义、音标和词形来自 ECDICT。")
+    .scrollIntoViewIfNeeded();
+  expect(
+    await content.evaluate((element) => ({
+      hasOverflow: element.scrollHeight > element.clientHeight,
+      scrollTop: element.scrollTop,
+    })),
+  ).toMatchObject({ hasOverflow: true, scrollTop: expect.any(Number) });
+  expect(
+    await content.evaluate((element) => element.scrollTop),
+  ).toBeGreaterThan(0);
 });

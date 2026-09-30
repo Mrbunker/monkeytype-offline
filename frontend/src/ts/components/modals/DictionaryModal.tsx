@@ -190,7 +190,7 @@ export function DictionaryModal() {
   return (
     <AnimatedModal
       id="Dictionary"
-      modalClass="max-w-4xl gap-0 overflow-hidden p-0 sm:p-0"
+      modalClass="max-w-4xl grid-rows-[auto_auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:p-0"
       wrapperClass="p-3 sm:p-8"
       focusFirstInput
       beforeShow={() => {
@@ -260,7 +260,7 @@ export function DictionaryModal() {
           }}
         />
       </nav>
-      <div class="grid gap-5 overflow-auto px-5 py-5 sm:px-7 sm:py-6">
+      <div class="grid min-h-0 gap-5 overflow-auto px-5 py-5 sm:px-7 sm:py-6">
         <Show when={storageError()}>
           <div
             role="alert"
