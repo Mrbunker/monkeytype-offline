@@ -190,7 +190,7 @@ export function DictionaryModal() {
   return (
     <AnimatedModal
       id="Dictionary"
-      modalClass="max-w-4xl grid-rows-[auto_auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:p-0"
+      modalClass="max-w-4xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:p-0"
       wrapperClass="p-3 sm:p-8"
       focusFirstInput
       beforeShow={() => {
@@ -226,11 +226,23 @@ export function DictionaryModal() {
         if (opener?.isConnected) opener.focus({ preventScroll: true });
       }}
     >
-      <header class="flex items-center gap-4 border-b border-sub-alt px-5 py-4 sm:px-7">
-        <div>
-          <h2 class="text-xl text-main sm:text-2xl">词典</h2>
-          <p class="mt-1 text-xs text-sub">离线查词与生词练习</p>
-        </div>
+      <header class="flex flex-wrap items-center gap-2 border-b border-sub-alt px-5 py-3 sm:px-7">
+        <h2 class="mr-2 text-xl text-main sm:text-2xl">词典</h2>
+        <nav class="flex gap-1 rounded bg-sub-alt p-1" aria-label="词典功能">
+          <Button
+            text="查词"
+            active={tab() === "search"}
+            onClick={() => setTab("search")}
+          />
+          <Button
+            text={`生词本 (${saved().length})`}
+            active={tab() === "saved"}
+            onClick={() => {
+              setTab("saved");
+              void refreshSaved();
+            }}
+          />
+        </nav>
         <Button
           text="关闭"
           aria-label="关闭"
@@ -240,27 +252,7 @@ export function DictionaryModal() {
           onClick={close}
         />
       </header>
-      <nav
-        class="flex gap-1 border-b border-sub-alt bg-sub-alt px-5 py-2 sm:px-7"
-        aria-label="词典功能"
-      >
-        <Button
-          text="查词"
-          active={tab() === "search"}
-          class="min-w-20"
-          onClick={() => setTab("search")}
-        />
-        <Button
-          text={`生词本 (${saved().length})`}
-          active={tab() === "saved"}
-          class="min-w-28"
-          onClick={() => {
-            setTab("saved");
-            void refreshSaved();
-          }}
-        />
-      </nav>
-      <div class="grid min-h-0 gap-5 overflow-auto px-5 py-5 sm:px-7 sm:py-6">
+      <div class="grid min-h-0 gap-4 overflow-auto px-5 py-4 sm:px-7 sm:py-5">
         <Show when={storageError()}>
           <div
             role="alert"
@@ -354,103 +346,119 @@ export function DictionaryModal() {
                   }
                 >
                   {(entry) => (
-                    <article class="grid gap-5" aria-label="单词详情">
-                      <section class="rounded bg-sub-alt p-4 sm:p-5">
-                        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                          <h2 class="text-3xl text-main sm:text-4xl">
-                            {entry().word}
-                          </h2>
-                          <Show when={entry().phonetic}>
-                            <span class="text-sub">/{entry().phonetic}/</span>
-                          </Show>
-                        </div>
-                        <Show when={outcome().query !== entry().word}>
-                          <p class="mt-2 text-sm text-sub">
-                            查询词 {outcome().query} · 原形 {entry().word}
-                          </p>
-                        </Show>
-                        <div class="mt-3 flex flex-wrap items-center gap-2">
-                          <For each={entry().tags}>
-                            {(tag) => (
-                              <span class="rounded bg-bg px-2 py-1 text-xs text-sub">
-                                {tagLabels[tag] ?? tag}
-                              </span>
-                            )}
-                          </For>
-                          <Show when={entry().frequency > 0}>
-                            <span class="text-xs text-sub">
-                              词频排名 {entry().frequency}
-                            </span>
-                          </Show>
-                        </div>
-                        <Show when={getLookupContext().input !== undefined}>
-                          <p class="mt-3 border-t border-bg pt-3 text-sm text-sub">
-                            本次输入：
-                            {(getLookupContext().input ?? "") === ""
-                              ? "（未输入）"
-                              : getLookupContext().input}{" "}
-                            ·{" "}
-                            {getLookupContext().input?.trim() ===
-                            getLookupContext().word.trim()
-                              ? "正确"
-                              : "与目标词不一致"}
-                            <Show
-                              when={Number.isFinite(getLookupContext().burst)}
-                            >
-                              {" "}
-                              · {Math.round(getLookupContext().burst ?? 0)} WPM
+                    <article class="grid gap-4" aria-label="单词详情">
+                      <section class="rounded bg-sub-alt p-4">
+                        <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                          <div>
+                            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                              <h2 class="text-3xl text-main sm:text-4xl">
+                                {entry().word}
+                              </h2>
+                              <Show when={entry().phonetic}>
+                                <span class="text-sub">
+                                  /{entry().phonetic}/
+                                </span>
+                              </Show>
+                            </div>
+                            <Show when={outcome().query !== entry().word}>
+                              <p class="mt-1 text-sm text-sub">
+                                查询词 {outcome().query} · 原形 {entry().word}
+                              </p>
                             </Show>
-                          </p>
-                        </Show>
-                      </section>
-                      <div class="flex flex-wrap gap-2 border-b border-sub-alt pb-5">
-                        <Button
-                          aria-label={
-                            saved().some((item) => item.word === entry().word)
-                              ? "取消收藏"
-                              : "收藏生词"
-                          }
-                          text={
-                            saved().some((item) => item.word === entry().word)
-                              ? "取消收藏"
-                              : "收藏生词"
-                          }
-                          fa={{ icon: "fa-star" }}
-                          disabled={busy() || !!storageError()}
-                          onClick={() => {
-                            const word = entry().word;
-                            const exists = saved().some(
-                              (item) => item.word === word,
-                            );
-                            void run(async () => {
-                              if (exists) {
-                                await deleteVocabulary([word]);
-                              } else {
-                                await saveVocabulary({
-                                  word,
-                                  language: "english",
-                                  createdAt: Date.now(),
-                                });
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                              <For each={entry().tags}>
+                                {(tag) => (
+                                  <span class="rounded bg-bg px-2 py-1 text-xs text-sub">
+                                    {tagLabels[tag] ?? tag}
+                                  </span>
+                                )}
+                              </For>
+                              <Show when={entry().frequency > 0}>
+                                <span class="text-xs text-sub">
+                                  词频排名 {entry().frequency}
+                                </span>
+                              </Show>
+                            </div>
+                            <Show when={getLookupContext().input !== undefined}>
+                              <p class="mt-2 text-sm text-sub">
+                                本次输入：
+                                {(getLookupContext().input ?? "") === ""
+                                  ? "（未输入）"
+                                  : getLookupContext().input}{" "}
+                                ·{" "}
+                                {getLookupContext().input?.trim() ===
+                                getLookupContext().word.trim()
+                                  ? "正确"
+                                  : "与目标词不一致"}
+                                <Show
+                                  when={Number.isFinite(
+                                    getLookupContext().burst,
+                                  )}
+                                >
+                                  {" "}
+                                  · {Math.round(getLookupContext().burst ?? 0)}
+                                  WPM
+                                </Show>
+                              </p>
+                            </Show>
+                          </div>
+                          <div class="flex flex-wrap gap-2 sm:max-w-64 sm:justify-end">
+                            <Button
+                              aria-label={
+                                saved().some(
+                                  (item) => item.word === entry().word,
+                                )
+                                  ? "取消收藏"
+                                  : "收藏生词"
                               }
-                            });
-                          }}
-                        />
-                        <Button
-                          text="练习这个词"
-                          onClick={() => practice([entry().word])}
-                        />
-                        <Button
-                          text="复制单词"
-                          variant="text"
-                          class="sm:ml-auto"
-                          onClick={() =>
-                            void run(async () => {
-                              await navigator.clipboard.writeText(entry().word);
-                              setNotice("已复制单词。");
-                            })
-                          }
-                        />
-                      </div>
+                              text={
+                                saved().some(
+                                  (item) => item.word === entry().word,
+                                )
+                                  ? "取消收藏"
+                                  : "收藏生词"
+                              }
+                              fa={{ icon: "fa-star" }}
+                              disabled={busy() || !!storageError()}
+                              onClick={() => {
+                                const word = entry().word;
+                                const exists = saved().some(
+                                  (item) => item.word === word,
+                                );
+                                void run(async () => {
+                                  if (exists) {
+                                    await deleteVocabulary([word]);
+                                  } else {
+                                    await saveVocabulary({
+                                      word,
+                                      language: "english",
+                                      createdAt: Date.now(),
+                                    });
+                                  }
+                                });
+                              }}
+                            />
+                            <Button
+                              text="练习"
+                              aria-label="练习这个词"
+                              onClick={() => practice([entry().word])}
+                            />
+                            <Button
+                              text="复制"
+                              aria-label="复制单词"
+                              variant="text"
+                              onClick={() =>
+                                void run(async () => {
+                                  await navigator.clipboard.writeText(
+                                    entry().word,
+                                  );
+                                  setNotice("已复制单词。");
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </section>
                       <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(14rem,0.45fr)]">
                         <div class="grid content-start gap-4">
                           <Show when={entry().translation}>
